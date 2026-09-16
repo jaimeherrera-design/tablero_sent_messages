@@ -1,3 +1,0 @@
-network_id,fecha,hora,billed,provider,segments,segment_number,is_unicode,failed,excluded,reason,total_characters,message_type,alias_provider,cuenta
-,2026-07-27,10,false,ROBOCOM-MOVISTAR,1,0,false,true,false,ESME_RSUBMITFAIL,151,flash,ROBOCOM_SMS,3
-,2026-07-27,10,false,ROBOCOM-MOVISTAR,1,0,false,true,false,ESME_RSUBMITFAIL,151,sms,ROBOCOM_SMS,3
