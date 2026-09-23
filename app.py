@@ -372,8 +372,9 @@ def style_figure(figure: go.Figure, height: int = 390) -> go.Figure:
         margin=dict(l=12, r=12, t=48, b=12),
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(19,28,44,.76)",
-        font=dict(family="DM Sans", color="#dfe7f3"),
-        title_font=dict(family="Space Grotesk", size=17),
+        font=dict(family="DM Sans", color="#ffffff"),
+        title_font=dict(family="Space Grotesk", size=17, color="#ffffff"),
+        legend=dict(font=dict(color="#ffffff"), title_font=dict(color="#ffffff")),
         legend_title_text="",
         hoverlabel=dict(bgcolor="#101725", font_color="#edf3fc"),
     )
