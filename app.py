@@ -754,6 +754,10 @@ with timeline_tab:
     period_map = {"Mes": "mes", "Día": "fecha", "Hora": "hora"}
     period = period_map[period_label]
     timeline = aggregate_with_variation(filtered, period)
+    if period == "fecha":
+        timeline = filtered.groupby("dia", as_index=False)["cuenta"].sum().sort_values("dia")
+        timeline["variacion"] = timeline["cuenta"].pct_change(fill_method=None) * 100
+        timeline["fecha"] = timeline["dia"]
     month_names = {
         1: "Enero", 2: "Febrero", 3: "Marzo", 4: "Abril", 5: "Mayo", 6: "Junio",
         7: "Julio", 8: "Agosto", 9: "Septiembre", 10: "Octubre", 11: "Noviembre", 12: "Diciembre",
@@ -761,14 +765,14 @@ with timeline_tab:
     month_ticks = pd.Series(dtype="datetime64[ns]")
     month_labels: list[str] = []
     month_axis_range: list[pd.Timestamp] = []
-    if period in {"mes", "fecha"}:
-        if period == "fecha":
-            month_ticks = filtered.groupby("mes", as_index=False)["fecha"].min()["fecha"]
-        else:
-            month_ticks = filtered["mes"].drop_duplicates().sort_values()
+    day_ticks: list[int] = []
+    if period == "mes":
+        month_ticks = filtered["mes"].drop_duplicates().sort_values()
         month_labels = [month_names[month.month] for month in month_ticks]
-        axis_padding = pd.Timedelta(days=1 if period == "fecha" else 15)
+        axis_padding = pd.Timedelta(days=15)
         month_axis_range = [timeline[period].min() - axis_padding, timeline[period].max() + axis_padding]
+    elif period == "fecha":
+        day_ticks = list(range(1, 32))
     left, right = st.columns([1.65, 1])
     with left:
         if period == "mes":
@@ -817,13 +821,35 @@ with timeline_tab:
                 markers=True,
                 color_discrete_sequence=[COLORS["cyan"]],
             )
+            if period == "fecha":
+                daily_average = float(timeline["cuenta"].mean())
+                daily_marker_colors = [
+                    COLORS["mint"] if value > daily_average else COLORS["red"] if value < daily_average else COLORS["amber"]
+                    for value in timeline["cuenta"]
+                ]
+                volume_chart.add_hline(
+                    y=daily_average,
+                    line_color=COLORS["amber"],
+                    line_dash="dash",
+                    line_width=2,
+                    annotation_text=f"Promedio: {format_number(daily_average)}",
+                    annotation_position="top left",
+                    annotation_font_color="#ffffff",
+                )
+            else:
+                daily_marker_colors = COLORS["mint"]
             volume_chart.update_traces(
                 line_width=2.5,
-                marker=dict(size=7, color=COLORS["mint"], line=dict(width=1.5, color="#0c111c")),
+                marker=dict(size=7, color=daily_marker_colors, line=dict(width=1.5, color="#0c111c")),
             )
-        if period in {"mes", "fecha"}:
+        if period == "mes":
             volume_chart.update_xaxes(
                 tickmode="array", tickvals=month_ticks, ticktext=month_labels, title_text="Mes", range=month_axis_range
+            )
+        elif period == "fecha":
+            volume_chart.update_xaxes(
+                tickmode="array", tickvals=day_ticks, ticktext=[str(day) for day in day_ticks],
+                title_text="Día del mes", range=[0.5, 31.5]
             )
         styled_volume_chart = style_figure(volume_chart)
         if period == "mes":
@@ -853,9 +879,14 @@ with timeline_tab:
                 textfont=dict(color="#edf3fc", size=12),
                 cliponaxis=False,
             )
-        if period in {"mes", "fecha"}:
+        if period == "mes":
             variation_chart.update_xaxes(
                 tickmode="array", tickvals=month_ticks, ticktext=month_labels, title_text="Mes", range=month_axis_range
+            )
+        elif period == "fecha":
+            variation_chart.update_xaxes(
+                tickmode="array", tickvals=day_ticks, ticktext=[str(day) for day in day_ticks],
+                title_text="Día del mes", range=[0.5, 31.5]
             )
         st.plotly_chart(style_figure(variation_chart), use_container_width=True)
 
