@@ -749,7 +749,7 @@ timeline_tab, mix_tab, quality_tab, insights_tab = st.tabs(
 
 with timeline_tab:
     st.subheader("Evolución del volumen")
-    period_label = st.segmented_control("Granularidad", ["Mes", "Día", "Hora"], default="Día")
+    period_label = st.segmented_control("Granularidad", ["Mes", "Día", "Hora"], default="Mes")
     period_map = {"Mes": "mes", "Día": "fecha", "Hora": "hora"}
     period = period_map[period_label]
     timeline = aggregate_with_variation(filtered, period)
@@ -792,8 +792,6 @@ with timeline_tab:
             )
             volume_chart.update_traces(
                 marker_color=bar_colors,
-                marker_line_color="#7dd3fc",
-                marker_line_width=1,
                 opacity=.9,
                 textposition="outside",
                 textfont=dict(color="#edf3fc", size=12),
