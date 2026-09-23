@@ -682,6 +682,9 @@ with st.sidebar:
     st.markdown("## Filtros")
     min_date = data["fecha"].min().date()
     max_date = data["fecha"].max().date()
+    available_months = sorted(data["fecha"].dt.to_period("M").unique(), reverse=True)
+    month_options = {"Todos los meses": None}
+    month_options.update({f"{month_names_es(period.month)} {period.year}": period for period in available_months})
     date_filter_mode = st.segmented_control(
         "Fechas",
         options=["Todas", "Una fecha", "Rango"],
@@ -704,6 +707,7 @@ with st.sidebar:
             start_date = end_date = pd.Timestamp(date_range)
     else:
         start_date, end_date = pd.Timestamp(min_date), pd.Timestamp(max_date)
+    selected_month = month_options[st.selectbox("Mes", month_options)]
     selected_provider = st.multiselect("Proveedor", sorted(data["provider"].dropna().astype(str).unique()))
     selected_type = st.multiselect("Tipo de mensaje", sorted(data["message_type"].dropna().astype(str).unique()))
     status = st.selectbox("Estado", ["Todos", "Exitosos", "Fallidos", "Excluidos"])
@@ -712,6 +716,8 @@ with st.sidebar:
     st.caption(f"Último dato: {max_date:%d/%m/%Y}")
 
 dimension_filtered = data.copy()
+if selected_month is not None:
+    dimension_filtered = dimension_filtered[dimension_filtered["fecha"].dt.to_period("M").eq(selected_month)]
 if selected_provider:
     dimension_filtered = dimension_filtered[dimension_filtered["provider"].astype(str).isin(selected_provider)]
 if selected_type:
