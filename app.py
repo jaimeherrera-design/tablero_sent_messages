@@ -771,6 +771,17 @@ with timeline_tab:
     left, right = st.columns([1.65, 1])
     with left:
         if period == "mes":
+            monthly_values = timeline["cuenta"]
+            low_threshold = monthly_values.quantile(1 / 3)
+            high_threshold = monthly_values.quantile(2 / 3)
+            if low_threshold == high_threshold:
+                bar_colors = [COLORS["amber"]] * len(monthly_values)
+            else:
+                bar_colors = [
+                    COLORS["red"] if value <= low_threshold else COLORS["mint"] if value >= high_threshold else COLORS["amber"]
+                    for value in monthly_values
+                ]
+            monthly_average = float(monthly_values.mean())
             volume_chart = px.bar(
                 timeline,
                 x=period,
@@ -780,6 +791,7 @@ with timeline_tab:
                 color_discrete_sequence=[COLORS["cyan"]],
             )
             volume_chart.update_traces(
+                marker_color=bar_colors,
                 marker_line_color="#7dd3fc",
                 marker_line_width=1,
                 opacity=.9,
@@ -787,6 +799,15 @@ with timeline_tab:
                 textfont=dict(color="#edf3fc", size=12),
                 cliponaxis=False,
                 hovertemplate="%{x|%B %Y}<br>%{y:,.0f} mensajes<extra></extra>",
+            )
+            volume_chart.add_hline(
+                y=monthly_average,
+                line_color=COLORS["amber"],
+                line_dash="dash",
+                line_width=2,
+                annotation_text=f"Promedio: {format_number(monthly_average)}",
+                annotation_position="top left",
+                annotation_font_color="#ffffff",
             )
         else:
             volume_chart = px.line(
@@ -805,7 +826,12 @@ with timeline_tab:
             volume_chart.update_xaxes(
                 tickmode="array", tickvals=month_ticks, ticktext=month_labels, title_text="Mes", range=month_axis_range
             )
-        st.plotly_chart(style_figure(volume_chart), use_container_width=True)
+        styled_volume_chart = style_figure(volume_chart)
+        if period == "mes":
+            styled_volume_chart.update_layout(
+                title_font=dict(color="#ffffff", family="Space Grotesk", size=17),
+            )
+        st.plotly_chart(styled_volume_chart, use_container_width=True)
     with right:
         variation_data = timeline.dropna(subset=["variacion"])
         variation_chart = px.bar(
