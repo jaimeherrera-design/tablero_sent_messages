@@ -54,24 +54,48 @@ st.markdown(
     [data-testid="stHeader"] { background: #0c111c; }
     [data-testid="stSidebar"] { background: #101725; border-right: 1px solid #253047; }
     [data-testid="stSidebar"] label, [data-testid="stSidebar"] p { color: #c8d2e2 !important; }
+    button[data-testid="stSidebarCollapsedControl"],
+    button[data-testid="stSidebarCollapseButton"],
     [data-testid="stSidebarCollapsedControl"] button,
-    [data-testid="stSidebarCollapseButton"] button {
-        width: 40px;
-        height: 40px;
-        border: 1px solid #50e3c2 !important;
-        border-radius: 6px;
-        background: #163536 !important;
-        box-shadow: 0 0 0 1px rgba(80, 227, 194, .16), 0 6px 16px rgba(0, 0, 0, .28);
-        color: #f4f8ff !important;
+    [data-testid="stSidebarCollapseButton"] button,
+    [data-testid="stHeader"] button[aria-label*="sidebar" i],
+    [data-testid="stHeader"] button[aria-label*="barra lateral" i] {
+        width: 58px !important;
+        height: 58px !important;
+        min-width: 58px !important;
+        border: 1px solid #65efd6 !important;
+        border-radius: 14px !important;
+        background: #0b4542 !important;
+        box-shadow: 0 0 0 1px rgba(101, 239, 214, .12), 0 8px 20px rgba(0, 0, 0, .3) !important;
+        color: #79f4da !important;
     }
+    button[data-testid="stSidebarCollapsedControl"] svg,
+    button[data-testid="stSidebarCollapseButton"] svg,
+    [data-testid="stSidebarCollapsedControl"] button svg,
+    [data-testid="stSidebarCollapseButton"] button svg,
+    [data-testid="stHeader"] button[aria-label*="sidebar" i] svg,
+    [data-testid="stHeader"] button[aria-label*="barra lateral" i] svg {
+        fill: none !important;
+        stroke: #79f4da !important;
+        width: 28px !important;
+        height: 28px !important;
+    }
+    button[data-testid="stSidebarCollapsedControl"]:hover,
+    button[data-testid="stSidebarCollapseButton"]:hover,
     [data-testid="stSidebarCollapsedControl"] button:hover,
-    [data-testid="stSidebarCollapseButton"] button:hover {
-        border-color: #9af3df !important;
-        background: #20514f !important;
-        color: #ffffff !important;
+    [data-testid="stSidebarCollapseButton"] button:hover,
+    [data-testid="stHeader"] button[aria-label*="sidebar" i]:hover,
+    [data-testid="stHeader"] button[aria-label*="barra lateral" i]:hover {
+        border-color: #a5ffe9 !important;
+        background: #126058 !important;
+        color: #a5ffe9 !important;
     }
+    button[data-testid="stSidebarCollapsedControl"]:focus-visible,
+    button[data-testid="stSidebarCollapseButton"]:focus-visible,
     [data-testid="stSidebarCollapsedControl"] button:focus-visible,
-    [data-testid="stSidebarCollapseButton"] button:focus-visible {
+    [data-testid="stSidebarCollapseButton"] button:focus-visible,
+    [data-testid="stHeader"] button[aria-label*="sidebar" i]:focus-visible,
+    [data-testid="stHeader"] button[aria-label*="barra lateral" i]:focus-visible {
         outline: 3px solid #ffb547;
         outline-offset: 2px;
     }
