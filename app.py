@@ -35,7 +35,7 @@ DIMENSION_LABELS = {
 }
 
 
-st.set_page_config(page_title="Dashboard envio sms", page_icon="▥", layout="wide")
+st.set_page_config(page_title="Sent Messages", page_icon="▥", layout="wide")
 st.markdown(
     """
     <style>
@@ -689,7 +689,7 @@ st.markdown(
     <section class="dashboard-banner">
         <div class="banner-content">
             <span class="eyebrow">Monitoreo de mensajería · Data</span>
-            <h1>Dashboard envio sms</h1>
+            <h1>Sent Messages</h1>
             <p>Tráfico SMS &nbsp;|&nbsp; Periodo analizado: <strong>{start_date:%d/%m/%Y} → {end_date:%d/%m/%Y}</strong> &nbsp;|&nbsp; <strong>{format_number(float(filtered['cuenta'].sum()))}</strong> mensajes filtrados</p>
         </div>
         <div class="banner-network" aria-hidden="true">
