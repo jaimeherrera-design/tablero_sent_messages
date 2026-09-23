@@ -54,6 +54,27 @@ st.markdown(
     [data-testid="stHeader"] { background: #0c111c; }
     [data-testid="stSidebar"] { background: #101725; border-right: 1px solid #253047; }
     [data-testid="stSidebar"] label, [data-testid="stSidebar"] p { color: #c8d2e2 !important; }
+    [data-testid="stSidebarCollapsedControl"] button,
+    [data-testid="stSidebarCollapseButton"] button {
+        width: 40px;
+        height: 40px;
+        border: 1px solid #50e3c2 !important;
+        border-radius: 6px;
+        background: #163536 !important;
+        box-shadow: 0 0 0 1px rgba(80, 227, 194, .16), 0 6px 16px rgba(0, 0, 0, .28);
+        color: #f4f8ff !important;
+    }
+    [data-testid="stSidebarCollapsedControl"] button:hover,
+    [data-testid="stSidebarCollapseButton"] button:hover {
+        border-color: #9af3df !important;
+        background: #20514f !important;
+        color: #ffffff !important;
+    }
+    [data-testid="stSidebarCollapsedControl"] button:focus-visible,
+    [data-testid="stSidebarCollapseButton"] button:focus-visible {
+        outline: 3px solid #ffb547;
+        outline-offset: 2px;
+    }
     [data-testid="stMetric"] {
         background: #131c2c;
         border: 1px solid #29364d;
