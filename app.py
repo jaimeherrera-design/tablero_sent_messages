@@ -61,9 +61,9 @@ st.markdown(
     [data-testid="stSidebarCollapseButton"] button,
     [data-testid="stHeader"] button[aria-label*="sidebar" i],
     [data-testid="stHeader"] button[aria-label*="barra lateral" i] {
-        width: 58px !important;
-        height: 58px !important;
-        min-width: 58px !important;
+        width: 44px !important;
+        height: 44px !important;
+        min-width: 44px !important;
         border: 1px solid #65efd6 !important;
         border-radius: 14px !important;
         background: #0b4542 !important;
@@ -80,9 +80,9 @@ st.markdown(
         color: #79f4da !important;
         fill: none !important;
         stroke: #79f4da !important;
-        width: 28px !important;
-        height: 28px !important;
-        font-size: 28px !important;
+        width: 21px !important;
+        height: 21px !important;
+        font-size: 21px !important;
     }
     button[data-testid="stExpandSidebarButton"]:hover,
     button[data-testid="stSidebarCollapsedControl"]:hover,
