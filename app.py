@@ -692,7 +692,7 @@ st.markdown(
         <div class="banner-content">
             <span class="eyebrow">Monitoreo de mensajería · Data</span>
             <h1>Sent Messages</h1>
-            <p>Último registro: <strong>{latest_record:%d/%m/%Y %H:%M}</strong> &nbsp;|&nbsp; Tráfico SMS &nbsp;|&nbsp; Periodo analizado: <strong>{start_date:%d/%m/%Y} → {end_date:%d/%m/%Y}</strong> &nbsp;|&nbsp; <strong>{format_number(float(filtered['cuenta'].sum()))}</strong> mensajes filtrados</p>
+            <p>Monitoreo consolidado &nbsp;|&nbsp; Periodo analizado: <strong>{start_date:%d/%m/%Y} → {end_date:%d/%m/%Y}</strong> &nbsp;|&nbsp; <strong>{len(files)}</strong> CSV consolidado(s) &nbsp;|&nbsp; Último registro: <strong>{latest_record:%d/%m/%Y %H:%M}</strong></p>
         </div>
         <div class="banner-network" aria-hidden="true">
             <span class="edge e1"></span><span class="edge e2"></span><span class="edge e3 faint"></span>
