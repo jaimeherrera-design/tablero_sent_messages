@@ -682,7 +682,28 @@ with st.sidebar:
     st.markdown("## Filtros")
     min_date = data["fecha"].min().date()
     max_date = data["fecha"].max().date()
-    date_range = st.date_input("Rango de fechas", value=(min_date, max_date), min_value=min_date, max_value=max_date)
+    date_filter_mode = st.segmented_control(
+        "Fechas",
+        options=["Todas", "Una fecha", "Rango"],
+        default="Todas",
+        selection_mode="single",
+    )
+    if date_filter_mode == "Una fecha":
+        selected_date = st.date_input("Fecha", value=max_date, min_value=min_date, max_value=max_date)
+        start_date = end_date = pd.Timestamp(selected_date)
+    elif date_filter_mode == "Rango":
+        date_range = st.date_input(
+            "Rango de fechas",
+            value=(min_date, max_date),
+            min_value=min_date,
+            max_value=max_date,
+        )
+        if isinstance(date_range, tuple) and len(date_range) == 2:
+            start_date, end_date = pd.Timestamp(date_range[0]), pd.Timestamp(date_range[1])
+        else:
+            start_date = end_date = pd.Timestamp(date_range)
+    else:
+        start_date, end_date = pd.Timestamp(min_date), pd.Timestamp(max_date)
     selected_provider = st.multiselect("Proveedor", sorted(data["provider"].dropna().astype(str).unique()))
     selected_type = st.multiselect("Tipo de mensaje", sorted(data["message_type"].dropna().astype(str).unique()))
     status = st.selectbox("Estado", ["Todos", "Exitosos", "Fallidos", "Excluidos"])
@@ -702,10 +723,6 @@ elif status == "Fallidos":
 elif status == "Excluidos":
     dimension_filtered = dimension_filtered[dimension_filtered["excluded"].fillna(False)]
 
-if isinstance(date_range, tuple) and len(date_range) == 2:
-    start_date, end_date = pd.Timestamp(date_range[0]), pd.Timestamp(date_range[1])
-else:
-    start_date = end_date = pd.Timestamp(date_range)
 filtered = dimension_filtered[dimension_filtered["fecha"].between(start_date, end_date)]
 
 st.markdown(
