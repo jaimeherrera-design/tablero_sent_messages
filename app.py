@@ -654,6 +654,8 @@ if data.empty:
     st.warning("Los archivos no contienen registros válidos.")
     st.stop()
 
+latest_record = data["fecha_hora"].max()
+
 with st.sidebar:
     st.markdown("## Filtros")
     min_date = data["fecha"].min().date()
@@ -690,7 +692,7 @@ st.markdown(
         <div class="banner-content">
             <span class="eyebrow">Monitoreo de mensajería · Data</span>
             <h1>Sent Messages</h1>
-            <p>Tráfico SMS &nbsp;|&nbsp; Periodo analizado: <strong>{start_date:%d/%m/%Y} → {end_date:%d/%m/%Y}</strong> &nbsp;|&nbsp; <strong>{format_number(float(filtered['cuenta'].sum()))}</strong> mensajes filtrados</p>
+            <p>Último registro: <strong>{latest_record:%d/%m/%Y %H:%M}</strong> &nbsp;|&nbsp; Tráfico SMS &nbsp;|&nbsp; Periodo analizado: <strong>{start_date:%d/%m/%Y} → {end_date:%d/%m/%Y}</strong> &nbsp;|&nbsp; <strong>{format_number(float(filtered['cuenta'].sum()))}</strong> mensajes filtrados</p>
         </div>
         <div class="banner-network" aria-hidden="true">
             <span class="edge e1"></span><span class="edge e2"></span><span class="edge e3 faint"></span>
