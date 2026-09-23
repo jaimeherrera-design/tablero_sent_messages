@@ -888,6 +888,7 @@ with timeline_tab:
                 tickmode="array", tickvals=day_ticks, ticktext=[str(day) for day in day_ticks],
                 title_text="Día del mes", range=[0.5, 31.5]
             )
+        variation_chart.update_xaxes(tickfont=dict(size=10))
         st.plotly_chart(style_figure(variation_chart), use_container_width=True)
 
     heatmap_data = filtered.pivot_table(index="hora", columns="dia_semana", values="cuenta", aggfunc="sum", fill_value=0)
