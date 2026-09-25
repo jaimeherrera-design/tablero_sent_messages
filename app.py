@@ -35,24 +35,27 @@ DIMENSION_LABELS = {
 }
 
 
-st.set_page_config(page_title="Sent Messages", page_icon="▥", layout="wide")
+st.set_page_config(page_title="Sent Messages", page_icon="▥", layout="wide", initial_sidebar_state="expanded")
 st.markdown(
     """
     <style>
     @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Material+Symbols+Rounded:FILL@0..1&family=Space+Grotesk:wght@500;600&display=swap');
     :root { color-scheme: dark; }
     .stApp {
-        background:
-            linear-gradient(rgba(12, 17, 28, .94), rgba(12, 17, 28, .98)),
-            repeating-linear-gradient(90deg, transparent 0, transparent 79px, #1b263b 80px),
-            #0c111c;
+        background: #020a0d;
         color: #edf3fc;
         font-family: 'DM Sans', sans-serif;
     }
+    [data-testid="stHeader"] { display: none !important; }
+    [data-testid="stSidebar"] { display: none !important; }
+    .main .block-container {
+        padding-top: 0 !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+        max-width: 100% !important;
+    }
     h1, h2, h3 { font-family: 'Space Grotesk', sans-serif !important; letter-spacing: 0 !important; }
     h1 { font-size: 2rem !important; margin-bottom: .15rem !important; }
-    [data-testid="stHeader"] { background: #0c111c; }
-    [data-testid="stSidebar"] { background: #101725; border-right: 1px solid #253047; }
     [data-testid="stSidebar"] label, [data-testid="stSidebar"] p { color: #c8d2e2 !important; }
     button[data-testid="stExpandSidebarButton"],
     button[data-testid="stSidebarCollapsedControl"],
@@ -118,85 +121,82 @@ st.markdown(
     [data-testid="stMetricValue"] > div { color: #edf3fc !important; }
     .kpi-grid {
         display: grid;
-        grid-template-columns: repeat(5, minmax(0, 1fr));
-        gap: 12px;
-        margin: 2px 0 24px;
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+        gap: 14px;
+        margin: 0 0 32px;
     }
     .kpi-card {
         position: relative;
-        overflow: hidden;
         min-width: 0;
-        min-height: 132px;
-        padding: 16px 16px 15px;
-        border: 1px solid #29364d;
-        border-radius: 8px;
-        background: linear-gradient(145deg, rgba(22, 33, 50, .98), rgba(15, 23, 37, .98));
-        box-shadow: 0 10px 26px rgba(0, 0, 0, .16);
+        min-height: 136px;
+        padding: 14px 15px 12px;
+        border: 1px solid rgba(82, 104, 128, 0.72);
+        border-radius: 14px;
+        background: linear-gradient(180deg, rgba(14, 20, 27, 0.96), rgba(10, 15, 20, 0.96));
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.04), 0 12px 18px rgba(0,0,0,0.14);
     }
-    .kpi-card::after {
+    .kpi-card::before {
         content: "";
         position: absolute;
-        inset: auto 0 0;
-        height: 2px;
-        background: var(--accent);
-        opacity: .85;
+        inset: 0 0 auto 0;
+        height: 1px;
+        background: rgba(255,255,255,0.05);
     }
-    .kpi-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .kpi-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        min-height: 26px;
+    }
     .kpi-label {
         overflow: hidden;
-        color: #aebbd0;
-        font-size: .78rem;
+        color: #a9b9cc;
+        font-size: .72rem;
         font-weight: 600;
         line-height: 1.2;
+        text-transform: none;
         text-overflow: ellipsis;
         white-space: nowrap;
+        letter-spacing: .01em;
     }
     .kpi-icon {
         display: grid;
-        flex: 0 0 34px;
-        width: 34px;
-        height: 34px;
         place-items: center;
-        border: 1px solid color-mix(in srgb, var(--accent) 42%, transparent);
+        width: 28px;
+        height: 28px;
         border-radius: 8px;
-        background: color-mix(in srgb, var(--accent) 12%, transparent);
+        background: rgba(85, 232, 202, 0.08);
+        border: 1px solid rgba(85, 232, 202, 0.20);
         color: var(--accent);
         font-family: 'Material Symbols Rounded';
-        font-size: 20px;
-        font-variation-settings: 'FILL' 0, 'wght' 500, 'GRAD' 0, 'opsz' 24;
+        font-size: 15px;
+        font-variation-settings: 'FILL' 0, 'wght' 550, 'GRAD' 0, 'opsz' 24;
+        box-shadow: inset 0 0 0 1px rgba(255,255,255,0.02);
     }
-    .kpi-icon.send-icon { position: relative; font-size: 0; }
-    .kpi-icon.send-icon::before {
-        content: "➤";
-        color: currentColor;
-        font-family: 'DM Sans', sans-serif;
-        font-size: 20px;
-        font-weight: 700;
-        line-height: 1;
-        transform: rotate(-12deg);
-    }
+    .kpi-card[data-tone="mint"] { --accent: #4de0c3; }
+    .kpi-card[data-tone="cyan"] { --accent: #4abaf7; }
+    .kpi-card[data-tone="amber"] { --accent: #ffb75d; }
+    .kpi-card[data-tone="red"] { --accent: #ff6d85; }
+    .kpi-card[data-tone="pink"] { --accent: #ff7b9d; }
+    .kpi-card[data-tone="purple"] { --accent: #c59af9; }
+    .kpi-card[data-tone="teal"] { --accent: #4de0c3; }
     .kpi-value {
         width: 100%;
-        margin-top: 20px;
+        margin-top: 18px;
         overflow: hidden;
-        color: #f4f8ff;
+        color: #edf3fc;
         font-family: 'Space Grotesk', sans-serif;
-        font-size: clamp(1.3rem, 1.72vw, 2rem);
+        font-size: clamp(1.38rem, 0.9vw + 1.05rem, 2.05rem);
         font-weight: 600;
-        line-height: 1;
+        line-height: 1.1;
         white-space: nowrap;
+        letter-spacing: -0.04em;
+        text-shadow: 0 0 12px rgba(80, 227, 194, 0.08);
     }
-    .kpi-card.primary .kpi-value { font-size: clamp(1.2rem, 1.55vw, 1.85rem); }
-    @media (max-width: 1100px) {
-        .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-        .kpi-card:last-child { grid-column: span 2; }
-        .kpi-value, .kpi-card.primary .kpi-value { font-size: 1.75rem; }
-    }
-    @media (max-width: 640px) {
-        .kpi-grid { grid-template-columns: 1fr; gap: 10px; }
-        .kpi-card, .kpi-card:last-child { grid-column: auto; min-height: 112px; }
-        .kpi-value, .kpi-card.primary .kpi-value { margin-top: 14px; font-size: 1.7rem; }
-    }
+    @media (max-width: 1200px) { .kpi-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+    @media (max-width: 820px) { .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @media (max-width: 560px) { .kpi-grid { grid-template-columns: 1fr; } }
     .quality-kpi-grid {
         display: grid;
         grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -281,81 +281,97 @@ st.markdown(
     .dashboard-banner {
         position: relative;
         overflow: hidden;
-        min-height: 220px;
-        margin-bottom: 20px;
-        padding: 34px 38px;
-        border: 1px solid #20322f;
+        min-height: 260px;
+        margin: 0 0 28px;
+        padding: 26px 32px 24px;
+        border: 1px solid rgba(18, 56, 51, 0.95);
         border-radius: 18px;
         background:
-            linear-gradient(90deg, rgba(3, 8, 11, .99) 0%, rgba(3, 8, 11, .96) 58%, rgba(5, 19, 20, .9) 100%),
-            #03080b;
+            radial-gradient(circle at 70% 20%, rgba(33, 116, 100, 0.18), transparent 26%),
+            radial-gradient(circle at 84% 68%, rgba(22, 146, 126, 0.12), transparent 20%),
+            linear-gradient(90deg, rgba(3, 8, 10, 0.96) 0%, rgba(4, 12, 14, 0.98) 54%, rgba(3, 19, 21, 0.94) 100%);
     }
-    .dashboard-banner::after {
+    .dashboard-banner::before {
         content: "";
         position: absolute;
         inset: 0;
         pointer-events: none;
         background-image:
-            linear-gradient(rgba(80, 227, 194, .025) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(80, 227, 194, .025) 1px, transparent 1px);
-        background-size: 76px 76px;
+            linear-gradient(rgba(80,227,194,0.02) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(80,227,194,0.02) 1px, transparent 1px);
+        background-size: 82px 82px;
     }
     .banner-content { position: relative; z-index: 2; max-width: 72%; }
     .dashboard-banner h1 {
-        margin: 12px 0 10px !important;
-        color: #f4f8ff;
-        font-size: 3rem !important;
-        font-weight: 600;
-        line-height: 1.06;
+        margin: 16px 0 12px !important;
+        color: #f2f5f9;
+        font-size: clamp(3rem, 4.2vw, 6rem) !important;
+        font-weight: 700;
+        line-height: .95;
+        letter-spacing: -0.055em;
     }
-    .dashboard-banner p { margin: 0; color: #bdc7d5; font-size: 1rem; }
+    .dashboard-banner p {
+        margin: 0;
+        color: #dfe8f3;
+        font-size: 1.05rem;
+        line-height: 1.5;
+    }
     .dashboard-banner p strong { color: #50e3c2; font-weight: 700; }
     .dashboard-banner .eyebrow {
         display: block;
-        color: #50e3c2;
-        font-size: .76rem;
+        color: #48e3c5;
+        font-size: .72rem;
         font-weight: 700;
-        letter-spacing: .22em;
+        letter-spacing: .18em;
         text-transform: uppercase;
     }
-    .banner-network { position: absolute; z-index: 1; inset: 0 0 0 65%; opacity: .82; }
+    .banner-network {
+        position: absolute;
+        z-index: 1;
+        inset: -8% -4% 0 57%;
+        opacity: 0.9;
+    }
     .banner-network .node,
     .banner-network .edge { position: absolute; display: block; }
     .banner-network .node {
-        width: 11px;
-        height: 11px;
-        border-radius: 50%;
-        background: #50e3c2;
-        box-shadow: 0 0 8px #50e3c2, 0 0 22px rgba(80, 227, 194, .7);
-    }
-    .banner-network .node.blue {
         width: 14px;
         height: 14px;
-        background: #44b7f7;
-        box-shadow: 0 0 9px #44b7f7, 0 0 24px rgba(68, 183, 247, .65);
+        border-radius: 50%;
+        background: #52e8ca;
+        box-shadow: 0 0 12px rgba(82, 232, 202, 0.8), 0 0 24px rgba(82, 232, 202, 0.4);
+    }
+    .banner-network .node.blue {
+        width: 16px;
+        height: 16px;
+        background: #54b8f8;
+        box-shadow: 0 0 12px rgba(84, 184, 248, 0.8), 0 0 28px rgba(84, 184, 248, 0.45);
     }
     .banner-network .edge {
-        height: 1px;
-        background: rgba(80, 227, 194, .5);
+        height: 2px;
+        background: rgba(85, 232, 202, 0.8);
         transform-origin: left center;
+        box-shadow: 0 0 8px rgba(85, 232, 202, 0.5);
     }
-    .banner-network .edge.faint { background: rgba(110, 138, 153, .18); }
-    .n1 { left: 8%; top: 12%; } .n2 { left: 35%; top: 38%; }
-    .n3 { left: 68%; top: 8%; } .n4 { left: 90%; top: 42%; }
-    .n5 { left: 57%; top: 72%; } .n6 { left: 18%; top: 76%; }
-    .e1 { left: 9%; top: 15%; width: 31%; transform: rotate(23deg); }
-    .e2 { left: 36%; top: 40%; width: 40%; transform: rotate(-28deg); }
-    .e3 { left: 69%; top: 11%; width: 29%; transform: rotate(33deg); }
-    .e4 { left: 59%; top: 74%; width: 39%; transform: rotate(-35deg); }
-    .e5 { left: 19%; top: 78%; width: 43%; transform: rotate(-11deg); }
-    .e6 { left: 36%; top: 42%; width: 37%; transform: rotate(49deg); }
-    .e7 { left: 9%; top: 15%; width: 67%; transform: rotate(52deg); }
+    .banner-network .edge.faint { background: rgba(126, 154, 178, 0.18); }
+    .n1 { left: 16%; top: 12%; }
+    .n2 { left: 31%; top: 42%; }
+    .n3 { left: 61%; top: 23%; }
+    .n4 { left: 75%; top: 52%; }
+    .n5 { left: 44%; top: 70%; }
+    .n6 { left: 80%; top: 80%; }
+    .e1 { left: 17%; top: 14%; width: 27%; transform: rotate(20deg); }
+    .e2 { left: 31%; top: 44%; width: 36%; transform: rotate(-18deg); }
+    .e3 { left: 61%; top: 25%; width: 18%; transform: rotate(-18deg); }
+    .e4 { left: 44%; top: 72%; width: 39%; transform: rotate(-22deg); }
+    .e5 { left: 16%; top: 12%; width: 61%; transform: rotate(38deg); }
+    .e6 { left: 29%; top: 42%; width: 36%; transform: rotate(40deg); }
+    .e7 { left: 58%; top: 28%; width: 22%; transform: rotate(34deg); }
     @media (max-width: 640px) {
-        .dashboard-banner { min-height: 210px; padding: 24px 22px; border-radius: 12px; }
+        .dashboard-banner { min-height: 220px; padding: 22px 18px; border-radius: 14px; }
         .banner-content { max-width: 100%; }
-        .dashboard-banner h1 { max-width: 96%; font-size: 2rem !important; }
-        .dashboard-banner p { max-width: 88%; font-size: .84rem; line-height: 1.5; }
-        .banner-network { inset: 42% -12% 0 45%; opacity: .32; }
+        .dashboard-banner h1 { font-size: 2.4rem !important; }
+        .dashboard-banner p { font-size: .84rem; line-height: 1.4; }
+        .banner-network { inset: 18% -6% 0 45%; opacity: .35; }
     }
     .matrix-shell {
         overflow: hidden;
@@ -478,7 +494,8 @@ def build_kpi_matrix(frame: pd.DataFrame, period: str) -> tuple[pd.DataFrame, st
     working["_excluidos"] = working["cuenta"] * working["excluded"].fillna(False).astype(bool)
     working["_facturados"] = working["cuenta"] * working["billed"].fillna(False).astype(bool)
 
-    period_column = {"Mes": "mes", "Día": "fecha", "Hora": "hora"}[period]
+    period_map = {"Month": "mes", "Day": "fecha", "Hour": "hora"}
+    period_column = period_map.get(period, "mes")
     matrix = (
         working.groupby(period_column, as_index=False)
         .agg(
@@ -490,12 +507,12 @@ def build_kpi_matrix(frame: pd.DataFrame, period: str) -> tuple[pd.DataFrame, st
         .sort_values(period_column)
     )
 
-    if period == "Mes":
+    if period == "Month":
         averages = working.groupby(["mes", "fecha"])["cuenta"].sum().groupby("mes").mean()
         matrix["Promedio operativo"] = matrix[period_column].map(averages)
         average_label = "Promedio diario"
         matrix["Periodo"] = matrix[period_column].map(lambda value: month_names_es(value.month))
-    elif period == "Día":
+    elif period == "Day":
         averages = working.groupby(["fecha", "hora"])["cuenta"].sum().groupby("fecha").mean()
         matrix["Promedio operativo"] = matrix[period_column].map(averages)
         average_label = "Promedio por hora"
@@ -570,35 +587,35 @@ def build_dimension_kpi_matrix(frame: pd.DataFrame, dimension: str) -> pd.DataFr
 
 def month_names_es(month: int) -> str:
     return {
-        1: "Enero", 2: "Febrero", 3: "Marzo", 4: "Abril", 5: "Mayo", 6: "Junio",
-        7: "Julio", 8: "Agosto", 9: "Septiembre", 10: "Octubre", 11: "Noviembre", 12: "Diciembre",
+        1: "January", 2: "February", 3: "March", 4: "April", 5: "May", 6: "June",
+        7: "July", 8: "August", 9: "September", 10: "October", 11: "November", 12: "December",
     }[month]
 
 
 def build_insights(frame: pd.DataFrame) -> list[tuple[str, str, str, str, str, str]]:
     if frame.empty:
-        return [("ALERTA", "Corto plazo", "!", "Sin datos para analizar", "Amplíe los filtros para generar alertas.", COLORS["red"])] * 6
+        return [("ALERT", "Short term", "!", "No data to analyze", "Widen the filters to generate alerts.", COLORS["red"])] * 6
 
     comparison = current_month_comparison(frame)
     variation = comparison["variation"]
     if variation is None:
-        trend_level, trend_color = "ATENCIÓN", COLORS["amber"]
+        trend_level, trend_color = "ATTENTION", COLORS["amber"]
     elif abs(variation) >= 15:
-        trend_level, trend_color = "ALERTA", COLORS["red"]
+        trend_level, trend_color = "ALERT", COLORS["red"]
     elif abs(variation) >= 5:
-        trend_level, trend_color = "ATENCIÓN", COLORS["amber"]
+        trend_level, trend_color = "ATTENTION", COLORS["amber"]
     else:
-        trend_level, trend_color = "ESTABLE", COLORS["mint"]
+        trend_level, trend_color = "STABLE", COLORS["mint"]
 
     providers = top_breakdown(frame, "provider", 2).sort_values("cuenta", ascending=False)
     leading_provider = str(providers.iloc[0]["provider"])
     concentration = float(providers.iloc[0]["cuenta"] / frame["cuenta"].sum() * 100)
     if concentration >= 50:
-        concentration_level, concentration_color = "ALERTA", COLORS["red"]
+        concentration_level, concentration_color = "ALERT", COLORS["red"]
     elif concentration >= 30:
-        concentration_level, concentration_color = "ATENCIÓN", COLORS["amber"]
+        concentration_level, concentration_color = "ATTENTION", COLORS["amber"]
     else:
-        concentration_level, concentration_color = "ESTABLE", COLORS["mint"]
+        concentration_level, concentration_color = "STABLE", COLORS["mint"]
 
     daily = frame.groupby("fecha", as_index=False)["cuenta"].sum()
     peak_day = daily.loc[daily["cuenta"].idxmax()]
@@ -692,41 +709,41 @@ def build_insights(frame: pd.DataFrame) -> list[tuple[str, str, str, str, str, s
 
 files = discover_csv_files(DATA_DIR)
 if not files:
-    st.error("No se encontraron archivos CSV en la carpeta del proyecto.")
+    st.error("No CSV files were found in the project folder.")
     st.stop()
 
 signature = tuple((path.name, path.stat().st_mtime_ns, path.stat().st_size) for path in files)
 try:
     data = load_data(signature)
 except (ValueError, pd.errors.ParserError) as error:
-    st.error(f"No fue posible consolidar los CSV: {error}")
+    st.error(f"It was not possible to consolidate the CSV files: {error}")
     st.stop()
 
 if data.empty:
-    st.warning("Los archivos no contienen registros válidos.")
+    st.warning("The files do not contain valid records.")
     st.stop()
 
 latest_record = data["fecha_hora"].max()
 
 with st.sidebar:
-    st.markdown("## Filtros")
+    st.markdown("## Filters")
     min_date = data["fecha"].min().date()
     max_date = data["fecha"].max().date()
     available_months = sorted(data["fecha"].dt.to_period("M").unique(), reverse=True)
-    month_options = {"Todos los meses": None}
+    month_options = {"All months": None}
     month_options.update({f"{month_names_es(period.month)} {period.year}": period for period in available_months})
     date_filter_mode = st.segmented_control(
-        "Fechas",
-        options=["Todas", "Una fecha", "Rango"],
-        default="Todas",
+        "Dates",
+        options=["All", "One date", "Range"],
+        default="All",
         selection_mode="single",
     )
-    if date_filter_mode == "Una fecha":
-        selected_date = st.date_input("Fecha", value=max_date, min_value=min_date, max_value=max_date)
+    if date_filter_mode == "One date":
+        selected_date = st.date_input("Date", value=max_date, min_value=min_date, max_value=max_date)
         start_date = end_date = pd.Timestamp(selected_date)
-    elif date_filter_mode == "Rango":
+    elif date_filter_mode == "Range":
         date_range = st.date_input(
-            "Rango de fechas",
+            "Date range",
             value=(min_date, max_date),
             min_value=min_date,
             max_value=max_date,
@@ -737,14 +754,13 @@ with st.sidebar:
             start_date = end_date = pd.Timestamp(date_range)
     else:
         start_date, end_date = pd.Timestamp(min_date), pd.Timestamp(max_date)
-    selected_month = month_options[st.selectbox("Mes", month_options)]
-    selected_provider = st.multiselect("Proveedor", sorted(data["provider"].dropna().astype(str).unique()))
-    selected_type = st.multiselect("Tipo de mensaje", sorted(data["message_type"].dropna().astype(str).unique()))
-    status = st.selectbox("Estado", ["Todos", "Exitosos", "Fallidos", "Excluidos"])
+    selected_month = month_options[st.selectbox("Month", month_options)]
+    selected_provider = st.multiselect("Provider", sorted(data["provider"].dropna().astype(str).unique()))
+    selected_type = st.multiselect("Message type", sorted(data["message_type"].dropna().astype(str).unique()))
+    status = st.selectbox("Status", ["All", "Successful", "Failed", "Excluded"])
     st.divider()
-    st.caption(f"{len(files)} archivos consolidados")
-    st.caption(f"Último dato: {max_date:%d/%m/%Y}")
-
+    st.caption(f"{len(files)} consolidated files")
+    st.caption(f"Last data: {max_date:%d/%m/%Y}")
 dimension_filtered = data.copy()
 if selected_month is not None:
     dimension_filtered = dimension_filtered[dimension_filtered["fecha"].dt.to_period("M").eq(selected_month)]
@@ -752,11 +768,11 @@ if selected_provider:
     dimension_filtered = dimension_filtered[dimension_filtered["provider"].astype(str).isin(selected_provider)]
 if selected_type:
     dimension_filtered = dimension_filtered[dimension_filtered["message_type"].astype(str).isin(selected_type)]
-if status == "Exitosos":
+if status == "Successful":
     dimension_filtered = dimension_filtered[~dimension_filtered["failed"].fillna(False) & ~dimension_filtered["excluded"].fillna(False)]
-elif status == "Fallidos":
+elif status == "Failed":
     dimension_filtered = dimension_filtered[dimension_filtered["failed"].fillna(False)]
-elif status == "Excluidos":
+elif status == "Excluded":
     dimension_filtered = dimension_filtered[dimension_filtered["excluded"].fillna(False)]
 
 filtered = dimension_filtered[dimension_filtered["fecha"].between(start_date, end_date)]
@@ -765,9 +781,9 @@ st.markdown(
     f"""
     <section class="dashboard-banner">
         <div class="banner-content">
-            <span class="eyebrow">Monitoreo de mensajería · Data</span>
+            <span class="eyebrow">MESSAGING ANALYTICS · AI</span>
             <h1>Sent Messages</h1>
-            <p>Monitoreo consolidado &nbsp;|&nbsp; Periodo analizado: <strong>{start_date:%d/%m/%Y} → {end_date:%d/%m/%Y}</strong> &nbsp;|&nbsp; <strong>{len(files)}</strong> CSV consolidado(s) &nbsp;|&nbsp; Último registro: <strong>{latest_record:%d/%m/%Y %H:%M}</strong></p>
+            <p>Consolidated monitoring &nbsp;|&nbsp; Period analyzed: <strong>{start_date:%d/%m/%Y} → {end_date:%d/%m/%Y}</strong> &nbsp;|&nbsp; <strong>{len(files)}</strong> CSV consolidated &nbsp;|&nbsp; Last record: <strong>{latest_record:%d/%m/%Y %H:%M}</strong></p>
         </div>
         <div class="banner-network" aria-hidden="true">
             <span class="edge e1"></span><span class="edge e2"></span><span class="edge e3 faint"></span>
@@ -781,7 +797,7 @@ st.markdown(
 )
 
 if filtered.empty:
-    st.warning("No hay datos para la combinación de filtros seleccionada.")
+    st.warning("No data for the selected filter combination.")
     st.stop()
 
 comparison = current_month_comparison(dimension_filtered)
@@ -793,25 +809,33 @@ average_daily = float(filtered.groupby("fecha")["cuenta"].sum().mean())
 st.markdown(
     f"""
     <section class="kpi-grid" aria-label="Indicadores principales">
-        <article class="kpi-card primary" style="--accent:#50e3c2">
-            <div class="kpi-head"><span class="kpi-label">Mensajes enviados</span><span class="kpi-icon send-icon" aria-label="Envíos"></span></div>
+        <article class="kpi-card" data-tone="mint">
+            <div class="kpi-head"><span class="kpi-label">Messages sent</span><span class="kpi-icon">➤</span></div>
             <div class="kpi-value">{format_number(total)}</div>
         </article>
-        <article class="kpi-card primary" style="--accent:#44b7f7">
-            <div class="kpi-head"><span class="kpi-label">Promedio diario</span><span class="kpi-icon">calendar_month</span></div>
-            <div class="kpi-value">{format_number(average_daily)}</div>
+        <article class="kpi-card" data-tone="cyan">
+            <div class="kpi-head"><span class="kpi-label">Messages read</span><span class="kpi-icon">✓</span></div>
+            <div class="kpi-value">{format_number(total * (1 - failed_rate / 100))}</div>
         </article>
-        <article class="kpi-card" style="--accent:#ffb547" title="Mes actual frente al mismo día de corte del mes anterior">
-            <div class="kpi-head"><span class="kpi-label">Variación MTD</span><span class="kpi-icon">trending_up</span></div>
-            <div class="kpi-value">{format_pct(comparison['variation'])}</div>
+        <article class="kpi-card" data-tone="amber">
+            <div class="kpi-head"><span class="kpi-label">Failed messages</span><span class="kpi-icon">×</span></div>
+            <div class="kpi-value">{format_number(total * failed_rate / 100)}</div>
         </article>
-        <article class="kpi-card" style="--accent:#ff6376">
-            <div class="kpi-head"><span class="kpi-label">Tasa de fallos</span><span class="kpi-icon">error</span></div>
+        <article class="kpi-card" data-tone="red">
+            <div class="kpi-head"><span class="kpi-label">Billed messages</span><span class="kpi-icon">$</span></div>
+            <div class="kpi-value">{format_number(total * (1 - excluded_rate / 100))}</div>
+        </article>
+        <article class="kpi-card" data-tone="teal">
+            <div class="kpi-head"><span class="kpi-label">% read</span><span class="kpi-icon">✓</span></div>
+            <div class="kpi-value">{(100 - failed_rate):.2f}%</div>
+        </article>
+        <article class="kpi-card" data-tone="red">
+            <div class="kpi-head"><span class="kpi-label">% failed</span><span class="kpi-icon">!</span></div>
             <div class="kpi-value">{failed_rate:.2f}%</div>
         </article>
-        <article class="kpi-card" style="--accent:#c38bfa">
-            <div class="kpi-head"><span class="kpi-label">Tasa de exclusión</span><span class="kpi-icon">filter_alt_off</span></div>
-            <div class="kpi-value">{excluded_rate:.2f}%</div>
+        <article class="kpi-card" data-tone="pink">
+            <div class="kpi-head"><span class="kpi-label">% billable</span><span class="kpi-icon">$</span></div>
+            <div class="kpi-value">{(100 - excluded_rate):.2f}%</div>
         </article>
     </section>
     """,
@@ -819,13 +843,13 @@ st.markdown(
 )
 
 timeline_tab, mix_tab, quality_tab, insights_tab = st.tabs(
-    ["Línea de tiempo", "Tipos y proveedores", "Calidad operativa", "Insights"]
+    ["Volume trend", "Mix & providers", "Operational quality", "Insights"]
 )
 
 with timeline_tab:
-    st.subheader("Evolución del volumen")
-    period_label = st.segmented_control("Granularidad", ["Mes", "Día", "Hora"], default="Mes")
-    period_map = {"Mes": "mes", "Día": "fecha", "Hora": "hora"}
+    st.subheader("Volume trend")
+    period_label = st.segmented_control("Granularity", ["Month", "Day", "Hour"], default="Month")
+    period_map = {"Month": "mes", "Day": "fecha", "Hour": "hora"}
     period = period_map[period_label]
     timeline = aggregate_with_variation(filtered, period)
     if period == "fecha":
@@ -833,8 +857,8 @@ with timeline_tab:
         timeline["variacion"] = timeline["cuenta"].pct_change(fill_method=None) * 100
         timeline["fecha"] = timeline["dia"]
     month_names = {
-        1: "Enero", 2: "Febrero", 3: "Marzo", 4: "Abril", 5: "Mayo", 6: "Junio",
-        7: "Julio", 8: "Agosto", 9: "Septiembre", 10: "Octubre", 11: "Noviembre", 12: "Diciembre",
+        1: "January", 2: "February", 3: "March", 4: "April", 5: "May", 6: "June",
+        7: "July", 8: "August", 9: "September", 10: "October", 11: "November", 12: "December",
     }
     month_ticks = pd.Series(dtype="datetime64[ns]")
     month_labels: list[str] = []
@@ -866,7 +890,7 @@ with timeline_tab:
                 x=period,
                 y="cuenta",
                 text=[format_number(value) for value in timeline["cuenta"]],
-                title="Mensajes por mes",
+                title="Messages by month",
                 color_discrete_sequence=[COLORS["cyan"]],
             )
             volume_chart.update_traces(
@@ -875,14 +899,14 @@ with timeline_tab:
                 textposition="outside",
                 textfont=dict(color="#edf3fc", size=12),
                 cliponaxis=False,
-                hovertemplate="%{x|%B %Y}<br>%{y:,.0f} mensajes<extra></extra>",
+                hovertemplate="%{x|%B %Y}<br>%{y:,.0f} messages<extra></extra>",
             )
             volume_chart.add_hline(
                 y=monthly_average,
                 line_color=COLORS["amber"],
                 line_dash="dash",
                 line_width=2,
-                annotation_text=f"Promedio: {format_number(monthly_average)}",
+                annotation_text=f"Average: {format_number(monthly_average)}",
                 annotation_position="top left",
                 annotation_font_color="#ffffff",
             )
@@ -891,7 +915,7 @@ with timeline_tab:
                 timeline,
                 x=period,
                 y="cuenta",
-                title=f"Mensajes por {period_label.lower()}",
+                title=f"Messages by {period_label.lower()}",
                 markers=True,
                 color_discrete_sequence=[COLORS["cyan"]],
             )
@@ -906,7 +930,7 @@ with timeline_tab:
                     line_color=COLORS["amber"],
                     line_dash="dash",
                     line_width=2,
-                    annotation_text=f"Promedio: {format_number(daily_average)}",
+                    annotation_text=f"Average: {format_number(daily_average)}",
                     annotation_position="top left",
                     annotation_font_color="#ffffff",
                 )
@@ -918,12 +942,12 @@ with timeline_tab:
             )
         if period == "mes":
             volume_chart.update_xaxes(
-                tickmode="array", tickvals=month_ticks, ticktext=month_labels, title_text="Mes", range=month_axis_range
+                tickmode="array", tickvals=month_ticks, ticktext=month_labels, title_text="Month", range=month_axis_range
             )
         elif period == "fecha":
             volume_chart.update_xaxes(
                 tickmode="array", tickvals=day_ticks, ticktext=[str(day) for day in day_ticks],
-                title_text="Día del mes", range=[0.5, 31.5]
+                title_text="Day of month", range=[0.5, 31.5]
             )
         styled_volume_chart = style_figure(volume_chart)
         if period == "mes":
@@ -937,7 +961,7 @@ with timeline_tab:
             variation_data,
             x=period,
             y="variacion",
-            title="Variación contra período anterior (%)",
+            title="Variation vs previous period (%)",
             color="variacion",
             color_continuous_scale=[[0, COLORS["red"]], [0.5, COLORS["amber"]], [1, COLORS["mint"]]],
             color_continuous_midpoint=0,
@@ -955,12 +979,12 @@ with timeline_tab:
             )
         if period == "mes":
             variation_chart.update_xaxes(
-                tickmode="array", tickvals=month_ticks, ticktext=month_labels, title_text="Mes", range=month_axis_range
+                tickmode="array", tickvals=month_ticks, ticktext=month_labels, title_text="Month", range=month_axis_range
             )
         elif period == "fecha":
             variation_chart.update_xaxes(
                 tickmode="array", tickvals=day_ticks, ticktext=[str(day) for day in day_ticks],
-                title_text="Día del mes", range=[0.5, 31.5]
+                title_text="Day of month", range=[0.5, 31.5]
             )
         variation_chart.update_xaxes(tickfont=dict(size=10))
         st.plotly_chart(style_figure(variation_chart), use_container_width=True)
@@ -981,16 +1005,16 @@ with timeline_tab:
             texttemplate="%{text}",
             textfont=dict(color="#07110f", size=10),
             colorscale=[[0, "#e05260"], [.5, "#f2c94c"], [1, "#22c55e"]],
-            colorbar=dict(title="Mensajes", tickformat="~s"),
+            colorbar=dict(title="Messages", tickformat="~s"),
             xgap=2,
             ygap=2,
-            hovertemplate="%{x} · %{y}:00<br>%{z:,.0f} mensajes<extra></extra>",
+            hovertemplate="%{x} · %{y}:00<br>%{z:,.0f} messages<extra></extra>",
         )
     )
     heatmap = style_figure(heatmap, 430)
     heatmap.update_layout(
         title=dict(
-            text="Mapa de intensidad por día y hora",
+            text="Intensity map by day and hour",
             font=dict(color="#ffffff", size=20, family="Space Grotesk"),
             x=0.02,
             xanchor="left",
@@ -998,11 +1022,11 @@ with timeline_tab:
     )
     st.plotly_chart(heatmap, use_container_width=True)
 
-    st.subheader("Matriz de indicadores")
+    st.subheader("Indicator matrix")
     matrix_period = st.segmented_control(
-        "Detalle de la matriz", ["Mes", "Día", "Hora"], default="Mes", key="matrix_period"
+        "Matrix detail", ["Month", "Day", "Hour"], default="Month", key="matrix_period"
     )
-    matrix_period = matrix_period or "Mes"
+    matrix_period = matrix_period or "Month"
     kpi_matrix, average_column = build_kpi_matrix(filtered, matrix_period)
     base_cell_style = "background-color:#070b11;color:#f4f8ff;border-color:#1d2939;"
     green_style = "background-color:#123d2d;color:#7ef0b2;font-weight:700;"
@@ -1125,9 +1149,9 @@ with mix_tab:
     provider_scatter_chart.update_layout(coloraxis_colorbar=dict(title="Fallos %", ticksuffix="%"))
     st.plotly_chart(style_figure(provider_scatter_chart, 520), use_container_width=True)
 
-    st.subheader("Composición del tráfico")
+    st.subheader("Traffic mix")
     traffic_dimensions = ["provider", "message_type", "billed", "failed"]
-    dimension = st.selectbox("Variable de análisis", traffic_dimensions, format_func=DIMENSION_LABELS.get)
+    dimension = st.selectbox("Analysis variable", traffic_dimensions, format_func=DIMENSION_LABELS.get)
     breakdown = top_breakdown(filtered, dimension)
     category_chart = px.bar(
         breakdown,
@@ -1143,12 +1167,12 @@ with mix_tab:
         textposition="outside",
         textfont=dict(color="#ffffff", size=12),
         cliponaxis=False,
-        hovertemplate=f"%{{y}}<br>%{{x:,.0f}} mensajes<extra></extra>",
+        hovertemplate=f"%{{y}}<br>%{{x:,.0f}} messages<extra></extra>",
     )
     category_chart.update_layout(coloraxis_showscale=False, margin=dict(l=12, r=82, t=48, b=12))
     st.plotly_chart(style_figure(category_chart, 480), use_container_width=True)
 
-    st.subheader(f"Matriz de indicadores por {DIMENSION_LABELS[dimension].lower()}")
+    st.subheader(f"Indicator matrix by {DIMENSION_LABELS[dimension].lower()}")
     dimension_matrix = build_dimension_kpi_matrix(filtered, dimension)
     dimension_matrix_style = (
         dimension_matrix.style
@@ -1186,11 +1210,11 @@ with mix_tab:
     )
 
 with quality_tab:
-    st.subheader("Calidad y entrega")
+    st.subheader("Quality and delivery")
     quality_kpis = [
-        ("Facturado", "billed", "✓", True),
-        ("Fallido", "failed", "!", False),
-        ("Excluido", "excluded", "×", False),
+        ("Billed", "billed", "✓", True),
+        ("Failed", "failed", "!", False),
+        ("Excluded", "excluded", "×", False),
         ("Unicode", "is_unicode", "U+", False),
     ]
     quality_cards: list[str] = []
@@ -1203,7 +1227,7 @@ with quality_tab:
             f'<div class="quality-kpi-head"><span class="quality-kpi-label">{label}</span>'
             f'<span class="quality-kpi-icon" aria-label="{label}">{icon}</span></div>'
             f'<div class="quality-kpi-value">{value:.2f}%</div>'
-            f'<div class="quality-kpi-benchmark">Promedio mensual · {benchmark:.2f}% · '
+            f'<div class="quality-kpi-benchmark">Monthly average · {benchmark:.2f}% · '
             f'<span class="quality-kpi-status">{signal_label}</span></div></article>'
         )
     st.markdown(f'<section class="quality-kpi-grid">{"".join(quality_cards)}</section>', unsafe_allow_html=True)
@@ -1215,7 +1239,7 @@ with quality_tab:
             x="cuenta",
             y="reason",
             orientation="h",
-            title="Principales motivos reportados",
+            title="Main reported reasons",
             color_discrete_sequence=[COLORS["red"]],
         )
         st.plotly_chart(style_figure(reason_chart), use_container_width=True)
@@ -1225,7 +1249,7 @@ with quality_tab:
             x="segments",
             y="cuenta",
             histfunc="sum",
-            title="Mensajes por cantidad de segmentos",
+            title="Messages by segment count",
             color_discrete_sequence=[COLORS["amber"]],
         )
         st.plotly_chart(style_figure(segment_chart), use_container_width=True)
@@ -1249,16 +1273,16 @@ with quality_tab:
             texttemplate="%{text}",
             textfont=dict(color="#07110f", size=10),
             colorscale=[[0, "#142b3d"], [.5, "#f2c94c"], [1, "#e05260"]],
-            colorbar=dict(title="Fallidos", tickformat="~s"),
+            colorbar=dict(title="Failed", tickformat="~s"),
             xgap=2,
             ygap=2,
-            hovertemplate="%{x} · %{y}:00<br>%{z:,.0f} fallidos<extra></extra>",
+            hovertemplate="%{x} · %{y}:00<br>%{z:,.0f} failed<extra></extra>",
         )
     )
     failed_heatmap = style_figure(failed_heatmap, 430)
     failed_heatmap.update_layout(
         title=dict(
-            text="Fallidos por día y hora",
+            text="Failed by day and hour",
             font=dict(color="#ffffff", size=20, family="Space Grotesk"),
             x=0.02,
             xanchor="left",
@@ -1271,13 +1295,13 @@ with quality_tab:
         character_data,
         x="total_characters",
         y="cuenta",
-        title="Distribución por longitud del mensaje",
+        title="Message length distribution",
         color_discrete_sequence=[COLORS["cyan"]],
     )
     st.plotly_chart(style_figure(character_chart), use_container_width=True)
 
 with insights_tab:
-    st.subheader("6 alertas para decidir")
+    st.subheader("6 alerts to decide")
     insight_columns = st.columns(3)
     for index, (level, horizon, icon, title, description, color) in enumerate(build_insights(filtered)):
         with insight_columns[index % 3]:
