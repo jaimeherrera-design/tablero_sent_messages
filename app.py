@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from html import escape
 from pathlib import Path
 
 import pandas as pd
@@ -7,402 +8,156 @@ import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
-from data_logic import aggregate_with_variation, current_month_comparison, discover_csv_files, load_and_consolidate, percent_change
+from data_logic import aggregate_with_variation, current_month_comparison, discover_csv_files, load_and_consolidate
 
 
 DATA_DIR = Path(__file__).resolve().parent
-COLORS = {
-    "mint": "#50E3C2",
-    "cyan": "#44B7F7",
-    "amber": "#FFB547",
-    "red": "#FF6376",
-    "muted": "#8491A8",
-    "grid": "#253047",
+COLORS = {"mint": "#50E3C2", "cyan": "#44B7F7", "amber": "#FFB547", "red": "#FF6376", "violet": "#C38BFA", "grid": "#253047"}
+MONTH_SIGNAL_COLORS = {"mint": "#00E676", "amber": "#FFC107", "red": "#FF1744"}
+METRIC_LABELS = {
+    "cuenta": "Mensajes",
+    "facturados": "Facturados",
+    "fallidos": "Fallidos",
+    "excluidos": "Excluidos",
 }
-DIMENSION_LABELS = {
-    "provider": "Proveedor",
-    "alias_provider": "Alias proveedor",
-    "message_type": "Tipo de mensaje",
-    "reason": "Motivo",
-    "network_id": "Red",
-    "segments": "Segmentos",
-    "segment_number": "Número de segmento",
-    "is_unicode": "Unicode",
-    "billed": "Facturado",
-    "failed": "Fallido",
-    "excluded": "Excluido",
-    "total_characters": "Caracteres",
-}
+METRIC_COLORS = {"cuenta": COLORS["cyan"], "facturados": COLORS["mint"], "fallidos": COLORS["red"], "excluidos": COLORS["amber"]}
+MONTH_NAMES = {1: "Enero", 2: "Febrero", 3: "Marzo", 4: "Abril", 5: "Mayo", 6: "Junio", 7: "Julio", 8: "Agosto", 9: "Septiembre", 10: "Octubre", 11: "Noviembre", 12: "Diciembre"}
 
 
-st.set_page_config(page_title="Sent Messages", page_icon="▥", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="Mensajes enviados", page_icon="▥", layout="wide")
 st.markdown(
     """
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Material+Symbols+Rounded:FILL@0..1&family=Space+Grotesk:wght@500;600&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
     :root { color-scheme: dark; }
-    .stApp {
-        background: #020a0d;
-        color: #edf3fc;
-        font-family: 'DM Sans', sans-serif;
-    }
-    [data-testid="stHeader"] { display: none !important; }
-    [data-testid="stSidebar"] { display: none !important; }
-    .main .block-container {
-        padding-top: 0 !important;
-        padding-left: 0 !important;
-        padding-right: 0 !important;
-        max-width: 100% !important;
-    }
+    .stApp { background: #050708; color: #edf3fc; font-family: 'DM Sans', sans-serif; }
+    [data-testid="stAppViewContainer"], [data-testid="stMain"] { background: #050708; }
+    [data-testid="stMainBlockContainer"] { max-width: 1440px; padding-top: 28px; padding-bottom: 36px; }
     h1, h2, h3 { font-family: 'Space Grotesk', sans-serif !important; letter-spacing: 0 !important; }
-    h1 { font-size: 2rem !important; margin-bottom: .15rem !important; }
-    [data-testid="stSidebar"] label, [data-testid="stSidebar"] p { color: #c8d2e2 !important; }
-    button[data-testid="stExpandSidebarButton"],
-    button[data-testid="stSidebarCollapsedControl"],
-    button[data-testid="stSidebarCollapseButton"],
-    [data-testid="stSidebarCollapsedControl"] button,
-    [data-testid="stSidebarCollapseButton"] button,
-    [data-testid="stHeader"] button[aria-label*="sidebar" i],
-    [data-testid="stHeader"] button[aria-label*="barra lateral" i] {
-        width: 44px !important;
-        height: 44px !important;
-        min-width: 44px !important;
-        border: 1px solid #65efd6 !important;
-        border-radius: 14px !important;
-        background: #0b4542 !important;
-        box-shadow: 0 0 0 1px rgba(101, 239, 214, .12), 0 8px 20px rgba(0, 0, 0, .3) !important;
-        color: #79f4da !important;
-    }
-    button[data-testid="stExpandSidebarButton"] [data-testid="stIconMaterial"],
-    button[data-testid="stSidebarCollapsedControl"] svg,
-    button[data-testid="stSidebarCollapseButton"] svg,
-    [data-testid="stSidebarCollapsedControl"] button svg,
-    [data-testid="stSidebarCollapseButton"] button svg,
-    [data-testid="stHeader"] button[aria-label*="sidebar" i] svg,
-    [data-testid="stHeader"] button[aria-label*="barra lateral" i] svg {
-        color: #79f4da !important;
-        fill: none !important;
-        stroke: #79f4da !important;
-        width: 21px !important;
-        height: 21px !important;
-        font-size: 21px !important;
-    }
-    button[data-testid="stExpandSidebarButton"]:hover,
-    button[data-testid="stSidebarCollapsedControl"]:hover,
-    button[data-testid="stSidebarCollapseButton"]:hover,
-    [data-testid="stSidebarCollapsedControl"] button:hover,
-    [data-testid="stSidebarCollapseButton"] button:hover,
-    [data-testid="stHeader"] button[aria-label*="sidebar" i]:hover,
-    [data-testid="stHeader"] button[aria-label*="barra lateral" i]:hover {
-        border-color: #a5ffe9 !important;
-        background: #126058 !important;
-        color: #a5ffe9 !important;
-    }
-    button[data-testid="stExpandSidebarButton"]:focus-visible,
-    button[data-testid="stSidebarCollapsedControl"]:focus-visible,
-    button[data-testid="stSidebarCollapseButton"]:focus-visible,
-    [data-testid="stSidebarCollapsedControl"] button:focus-visible,
-    [data-testid="stSidebarCollapseButton"] button:focus-visible,
-    [data-testid="stHeader"] button[aria-label*="sidebar" i]:focus-visible,
-    [data-testid="stHeader"] button[aria-label*="barra lateral" i]:focus-visible {
-        outline: 3px solid #ffb547;
-        outline-offset: 2px;
-    }
-    [data-testid="stMetric"] {
-        background: #131c2c;
-        border: 1px solid #29364d;
-        border-top: 3px solid #50e3c2;
-        border-radius: 6px;
-        padding: 14px 16px;
-        min-height: 122px;
-    }
-    [data-testid="stMetricLabel"] p { color: #aebbd0 !important; }
-    [data-testid="stMetricValue"] { color: #edf3fc !important; font-family: 'Space Grotesk', sans-serif; }
-    [data-testid="stMetricValue"] > div { color: #edf3fc !important; }
-    .kpi-grid {
-        display: grid;
-        grid-template-columns: repeat(7, minmax(0, 1fr));
-        gap: 14px;
-        margin: 0 0 32px;
-    }
-    .kpi-card {
-        position: relative;
-        min-width: 0;
-        min-height: 136px;
-        padding: 14px 15px 12px;
-        border: 1px solid rgba(82, 104, 128, 0.72);
-        border-radius: 14px;
-        background: linear-gradient(180deg, rgba(14, 20, 27, 0.96), rgba(10, 15, 20, 0.96));
-        box-shadow: inset 0 1px 0 rgba(255,255,255,0.04), 0 12px 18px rgba(0,0,0,0.14);
-    }
-    .kpi-card::before {
-        content: "";
-        position: absolute;
-        inset: 0 0 auto 0;
-        height: 1px;
-        background: rgba(255,255,255,0.05);
-    }
-    .kpi-head {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 10px;
-        min-height: 26px;
-    }
-    .kpi-label {
-        overflow: hidden;
-        color: #a9b9cc;
-        font-size: .72rem;
-        font-weight: 600;
-        line-height: 1.2;
-        text-transform: none;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        letter-spacing: .01em;
-    }
-    .kpi-icon {
-        display: grid;
-        place-items: center;
-        width: 28px;
-        height: 28px;
-        border-radius: 8px;
-        background: rgba(85, 232, 202, 0.08);
-        border: 1px solid rgba(85, 232, 202, 0.20);
-        color: var(--accent);
-        font-family: 'Material Symbols Rounded';
-        font-size: 15px;
-        font-variation-settings: 'FILL' 0, 'wght' 550, 'GRAD' 0, 'opsz' 24;
-        box-shadow: inset 0 0 0 1px rgba(255,255,255,0.02);
-    }
-    .kpi-card[data-tone="mint"] { --accent: #4de0c3; }
-    .kpi-card[data-tone="cyan"] { --accent: #4abaf7; }
-    .kpi-card[data-tone="amber"] { --accent: #ffb75d; }
-    .kpi-card[data-tone="red"] { --accent: #ff6d85; }
-    .kpi-card[data-tone="pink"] { --accent: #ff7b9d; }
-    .kpi-card[data-tone="purple"] { --accent: #c59af9; }
-    .kpi-card[data-tone="teal"] { --accent: #4de0c3; }
-    .kpi-value {
-        width: 100%;
-        margin-top: 18px;
-        overflow: hidden;
-        color: #edf3fc;
-        font-family: 'Space Grotesk', sans-serif;
-        font-size: clamp(1.38rem, 0.9vw + 1.05rem, 2.05rem);
-        font-weight: 600;
-        line-height: 1.1;
-        white-space: nowrap;
-        letter-spacing: -0.04em;
-        text-shadow: 0 0 12px rgba(80, 227, 194, 0.08);
-    }
-    @media (max-width: 1200px) { .kpi-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
-    @media (max-width: 820px) { .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-    @media (max-width: 560px) { .kpi-grid { grid-template-columns: 1fr; } }
-    .quality-kpi-grid {
-        display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-        gap: 12px;
-        margin: 2px 0 24px;
-    }
-    .quality-kpi-card {
-        position: relative;
-        overflow: hidden;
-        min-width: 0;
-        min-height: 156px;
-        padding: 17px;
-        border: 1px solid color-mix(in srgb, var(--signal) 40%, #29364d);
-        border-radius: 8px;
-        background: linear-gradient(145deg, rgba(22, 33, 50, .98), rgba(15, 23, 37, .98));
-        box-shadow: inset 0 2px 0 var(--signal), 0 10px 26px rgba(0, 0, 0, .16);
-    }
-    .quality-kpi-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-    .quality-kpi-label { color: #b8c3d5; font-size: .82rem; font-weight: 700; }
-    .quality-kpi-icon {
-        display: grid;
-        flex: 0 0 36px;
-        width: 36px;
-        height: 36px;
-        place-items: center;
-        border: 1px solid color-mix(in srgb, var(--signal) 48%, transparent);
-        border-radius: 8px;
-        background: color-mix(in srgb, var(--signal) 13%, transparent);
-        color: var(--signal);
-        font-family: 'DM Sans', sans-serif;
-        font-size: 18px;
-        font-weight: 700;
-    }
-    .quality-kpi-value {
-        margin-top: 17px;
-        color: #f4f8ff;
-        font-family: 'Space Grotesk', sans-serif;
-        font-size: clamp(1.6rem, 2vw, 2.15rem);
-        font-weight: 600;
-        line-height: 1;
-    }
-    .quality-kpi-benchmark { margin-top: 12px; color: #93a1b7; font-size: .74rem; }
-    .quality-kpi-status { color: var(--signal); font-weight: 700; }
-    @media (max-width: 1000px) { .quality-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-    @media (max-width: 560px) { .quality-kpi-grid { grid-template-columns: 1fr; } }
-    .stTabs [data-baseweb="tab-list"] { gap: 8px; border-bottom: 1px solid #29364d; }
-    .stTabs [data-baseweb="tab"] { height: 48px; color: #9ba8bd; background: transparent; }
-    .stTabs [aria-selected="true"] { color: #edf3fc !important; border-bottom: 2px solid #50e3c2; }
-    .insight {
-        min-height: 138px;
-        background: #131c2c;
-        border: 1px solid #29364d;
-        border-left: 5px solid var(--signal);
-        border-radius: 6px;
-        padding: 15px 16px;
-        margin-bottom: 12px;
-    }
-    .insight-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-    .insight-meta { display: flex; align-items: center; gap: 8px; }
-    .insight-icon {
-        display: grid;
-        width: 30px;
-        height: 30px;
-        place-items: center;
-        border: 1px solid color-mix(in srgb, var(--signal) 52%, transparent);
-        border-radius: 7px;
-        background: color-mix(in srgb, var(--signal) 12%, transparent);
-        color: var(--signal);
-        font-family: 'DM Sans', sans-serif;
-        font-size: 16px;
-        font-weight: 700;
-    }
-    .insight .signal { color: var(--signal); font-size: .72rem; font-weight: 700; text-transform: uppercase; }
-    .insight-horizon {
-        color: #9eabc0;
-        font-size: .68rem;
-        font-weight: 700;
-        text-transform: uppercase;
-    }
-    .insight strong { display: block; font-family: 'Space Grotesk'; margin: 7px 0 5px; }
-    .insight p { color: #aab5c7; font-size: .88rem; line-height: 1.4; margin: 0; }
-    .dashboard-banner {
-        position: relative;
-        overflow: hidden;
-        min-height: 260px;
-        margin: 0 0 28px;
-        padding: 26px 32px 24px;
-        border: 1px solid rgba(18, 56, 51, 0.95);
-        border-radius: 18px;
-        background:
-            radial-gradient(circle at 70% 20%, rgba(33, 116, 100, 0.18), transparent 26%),
-            radial-gradient(circle at 84% 68%, rgba(22, 146, 126, 0.12), transparent 20%),
-            linear-gradient(90deg, rgba(3, 8, 10, 0.96) 0%, rgba(4, 12, 14, 0.98) 54%, rgba(3, 19, 21, 0.94) 100%);
-    }
-    .dashboard-banner::before {
-        content: "";
-        position: absolute;
-        inset: 0;
-        pointer-events: none;
-        background-image:
-            linear-gradient(rgba(80,227,194,0.02) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(80,227,194,0.02) 1px, transparent 1px);
-        background-size: 82px 82px;
-    }
-    .banner-content { position: relative; z-index: 2; max-width: 72%; }
-    .dashboard-banner h1 {
-        margin: 16px 0 12px !important;
-        color: #f2f5f9;
-        font-size: clamp(3rem, 4.2vw, 6rem) !important;
-        font-weight: 700;
-        line-height: .95;
-        letter-spacing: -0.055em;
-    }
-    .dashboard-banner p {
-        margin: 0;
-        color: #dfe8f3;
-        font-size: 1.05rem;
-        line-height: 1.5;
-    }
-    .dashboard-banner p strong { color: #50e3c2; font-weight: 700; }
-    .dashboard-banner .eyebrow {
-        display: block;
-        color: #48e3c5;
-        font-size: .72rem;
-        font-weight: 700;
-        letter-spacing: .18em;
-        text-transform: uppercase;
-    }
-    .banner-network {
-        position: absolute;
-        z-index: 1;
-        inset: -8% -4% 0 57%;
-        opacity: 0.9;
-    }
-    .banner-network .node,
-    .banner-network .edge { position: absolute; display: block; }
-    .banner-network .node {
-        width: 14px;
-        height: 14px;
-        border-radius: 50%;
-        background: #52e8ca;
-        box-shadow: 0 0 12px rgba(82, 232, 202, 0.8), 0 0 24px rgba(82, 232, 202, 0.4);
-    }
-    .banner-network .node.blue {
-        width: 16px;
-        height: 16px;
-        background: #54b8f8;
-        box-shadow: 0 0 12px rgba(84, 184, 248, 0.8), 0 0 28px rgba(84, 184, 248, 0.45);
-    }
-    .banner-network .edge {
-        height: 2px;
-        background: rgba(85, 232, 202, 0.8);
-        transform-origin: left center;
-        box-shadow: 0 0 8px rgba(85, 232, 202, 0.5);
-    }
-    .banner-network .edge.faint { background: rgba(126, 154, 178, 0.18); }
-    .n1 { left: 16%; top: 12%; }
-    .n2 { left: 31%; top: 42%; }
-    .n3 { left: 61%; top: 23%; }
-    .n4 { left: 75%; top: 52%; }
-    .n5 { left: 44%; top: 70%; }
-    .n6 { left: 80%; top: 80%; }
-    .e1 { left: 17%; top: 14%; width: 27%; transform: rotate(20deg); }
-    .e2 { left: 31%; top: 44%; width: 36%; transform: rotate(-18deg); }
-    .e3 { left: 61%; top: 25%; width: 18%; transform: rotate(-18deg); }
-    .e4 { left: 44%; top: 72%; width: 39%; transform: rotate(-22deg); }
-    .e5 { left: 16%; top: 12%; width: 61%; transform: rotate(38deg); }
-    .e6 { left: 29%; top: 42%; width: 36%; transform: rotate(40deg); }
-    .e7 { left: 58%; top: 28%; width: 22%; transform: rotate(34deg); }
-    @media (max-width: 640px) {
-        .dashboard-banner { min-height: 220px; padding: 22px 18px; border-radius: 14px; }
-        .banner-content { max-width: 100%; }
-        .dashboard-banner h1 { font-size: 2.4rem !important; }
-        .dashboard-banner p { font-size: .84rem; line-height: 1.4; }
-        .banner-network { inset: 18% -6% 0 45%; opacity: .35; }
-    }
-    .matrix-shell {
-        overflow: hidden;
-        border: 1px solid #29364d;
-        border-radius: 8px;
-        background: #070b11;
-    }
-    .matrix-shell.scrollable { overflow-y: auto; }
-    table.kpi-matrix { width: 100%; border-collapse: collapse; background: #070b11; font-size: .8rem; }
-    table.kpi-matrix th {
-        position: sticky;
-        z-index: 2;
-        top: 0;
-        padding: 11px 10px;
-        border-bottom: 1px solid #334155;
-        background: #0d1522 !important;
+    [data-testid="stHeader"] { background: #0c111c; }
+    [data-testid="stSidebar"] { background: #101725; border-right: 1px solid #253047; }
+    [data-testid="stSidebar"] h1,
+    [data-testid="stSidebar"] h2,
+    [data-testid="stSidebar"] h3,
+    [data-testid="stSidebar"] [data-testid="stWidgetLabel"],
+    [data-testid="stSidebar"] [data-testid="stWidgetLabel"] p,
+    [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] > p > strong,
+    [data-testid="stSidebar"] [data-testid="stMarkdown"] > [data-testid="stMarkdownContainer"] > p {
         color: #ffffff !important;
-        font-weight: 700;
-        text-align: right;
-        white-space: nowrap;
     }
-    table.kpi-matrix td {
-        padding: 9px 10px;
-        border-bottom: 1px solid #1d2939;
-        color: #f4f8ff;
-        text-align: right;
-        white-space: nowrap;
+    [data-testid="stWidgetLabel"],
+    [data-testid="stWidgetLabel"] p,
+    [data-testid="stWidgetLabel"] label {
+        color: #ffffff !important;
     }
-    table.kpi-matrix th:first-child, table.kpi-matrix td:first-child { text-align: left; }
-    table.kpi-matrix tbody tr:last-child td { border-bottom: 0; }
-    table.kpi-matrix tbody tr:hover td { filter: brightness(1.15); }
+    [data-testid="stSegmentedControl"] label,
+    [data-testid="stSegmentedControl"] p {
+        color: #ffffff !important;
+    }
+    [data-testid="stSegmentedControl"], [data-baseweb="segmented-control"] { padding: 4px; border: 1px solid #1f2a35; border-radius: 10px; background: #090c0f; }
+    [data-testid="stSegmentedControl"] [aria-checked="true"],
+    [data-testid="stSegmentedControl"] [data-selected="true"],
+    [data-baseweb="segmented-control"] [aria-checked="true"] {
+        border-radius: 7px !important;
+        background: #063d34 !important;
+        color: #ffffff !important;
+        box-shadow: inset 0 0 0 1px #1ac9a8, 0 4px 12px rgba(0,0,0,.25);
+    }
+    [data-testid="stVerticalBlockBorderWrapper"] { border-color: #1f2a35 !important; border-radius: 14px !important; background: #090c0f !important; box-shadow: inset 0 1px 0 rgba(255,255,255,.025), 0 10px 24px rgba(0,0,0,.16); }
+    [data-testid="stSidebar"] [data-testid="stCaptionContainer"] p { color: #cbd5e1 !important; }
+    [data-testid="stSidebarCollapseButton"] button,
+    button[data-testid="stExpandSidebarButton"] {
+        width: 44px;
+        height: 44px;
+        border: 1px solid #50e3c2 !important;
+        border-radius: 9px !important;
+        background: #063d34 !important;
+        color: #55f0d0 !important;
+        box-shadow: 0 0 0 1px rgba(80,227,194,.08), 0 8px 22px rgba(0,0,0,.3);
+        transition: background-color .18s ease, border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+    }
+    button[data-testid="stExpandSidebarButton"] { position: relative; top: 19px; left: 6px; }
+    [data-testid="stSidebarCollapseButton"] button { position: relative; top: 19px; }
+    [data-testid="stSidebarCollapseButton"] button:hover,
+    button[data-testid="stExpandSidebarButton"]:hover {
+        border-color: #7af7dc !important;
+        background: #095246 !important;
+        box-shadow: 0 0 0 3px rgba(80,227,194,.16), 0 10px 25px rgba(0,0,0,.34);
+    }
+    [data-testid="stSidebarCollapseButton"] button:focus-visible,
+    button[data-testid="stExpandSidebarButton"]:focus-visible {
+        outline: 2px solid #edf3fc !important;
+        outline-offset: 3px;
+    }
+    [data-testid="stSidebarCollapseButton"] button [data-testid="stIconMaterial"],
+    button[data-testid="stExpandSidebarButton"] [data-testid="stIconMaterial"] {
+        color: #55f0d0 !important;
+        font-size: 24px !important;
+        font-weight: 600;
+    }
+    .dashboard-banner { position: relative; overflow: hidden; min-height: 220px; margin-bottom: 20px; padding: 34px 38px; border: 1px solid #1f3432; border-radius: 12px; background: radial-gradient(circle at 78% 42%, rgba(20,94,91,.16), transparent 24%), linear-gradient(90deg, #020607 0%, #03090a 58%, #061312 100%); }
+    .banner-content { position: relative; z-index: 2; max-width: 76%; }
+    .dashboard-banner .eyebrow { color: #25ebc3; font-size: .78rem; font-weight: 700; letter-spacing: .2em; text-transform: uppercase; }
+    .dashboard-banner h1 { margin: 13px 0 8px !important; color: #f5fbfa; font-size: 44px !important; font-weight: 700; line-height: 1.05; }
+    .dashboard-banner p { margin: 0; color: #c4cccf; font-size: 1rem; line-height: 1.65; }
+    .dashboard-banner strong { color: #50e3c2; }
+    .banner-network { position: absolute; z-index: 1; inset: 0 0 0 62%; opacity: .9; }
+    .banner-node, .banner-edge { position: absolute; display: block; }
+    .banner-node { width: 11px; height: 11px; border-radius: 50%; background: #00b995; box-shadow: 0 0 8px #00b995, 0 0 22px rgba(0,185,149,.78); }
+    .banner-node.blue { width: 14px; height: 14px; background: #318cab; box-shadow: 0 0 10px #318cab, 0 0 25px rgba(49,140,171,.7); }
+    .banner-edge { height: 1px; background: rgba(0,185,149,.48); transform-origin: left center; }
+    .banner-edge.faint { background: rgba(77,135,139,.17); }
+    .bn1 { left: 8%; top: 12%; } .bn2 { left: 35%; top: 38%; } .bn3 { left: 68%; top: 8%; }
+    .bn4 { left: 89%; top: 43%; } .bn5 { left: 57%; top: 73%; } .bn6 { left: 18%; top: 77%; }
+    .be1 { left: 9%; top: 15%; width: 31%; transform: rotate(23deg); }
+    .be2 { left: 36%; top: 40%; width: 40%; transform: rotate(-28deg); }
+    .be3 { left: 69%; top: 11%; width: 29%; transform: rotate(34deg); }
+    .be4 { left: 59%; top: 74%; width: 38%; transform: rotate(-35deg); }
+    .be5 { left: 19%; top: 78%; width: 43%; transform: rotate(-11deg); }
+    .be6 { left: 36%; top: 42%; width: 37%; transform: rotate(49deg); }
+    .be7 { left: 9%; top: 15%; width: 68%; transform: rotate(52deg); }
+    .kpi-section { margin: 4px 0 26px; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+    .section-kicker { margin: 0 0 12px 3px; color: #8b98a7; font-size: .72rem; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; }
+    .kpi-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; margin: 0; }
+    .kpi-card { min-width: 0; min-height: 101px; padding: 12px 13px; border: 1px solid #202a33; border-top: 1px solid #202a33; border-radius: 11px; background: linear-gradient(145deg, #11161a, #0b0e11); box-shadow: 0 8px 18px rgba(0,0,0,.2); }
+    .kpi-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .kpi-label { overflow: hidden; color: #8f98a3; font-size: .78rem; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+    .kpi-icon { color: var(--accent); font: 600 22px/1 'Space Grotesk'; }
+    .kpi-value { margin-top: 11px; color: var(--accent); font: 600 clamp(1.25rem, 1.7vw, 1.85rem)/1 'Space Grotesk'; white-space: nowrap; }
+    .kpi-note { margin-top: 7px; color: #8795aa; font-size: .66rem; }
+    .kpi-note strong { color: #7d8792; font-weight: 500; }
+    .stTabs { margin-top: 8px; }
+    .stTabs [data-baseweb="tab-list"], .stTabs [role="tablist"] { display: flex; gap: 4px; width: 100%; margin-bottom: 28px; padding: 6px; border: 1px solid #33414d !important; border-radius: 14px; background: #090c0f !important; box-shadow: inset 0 1px 0 rgba(255,255,255,.035), 0 8px 22px rgba(0,0,0,.2); }
+    .stTabs [data-testid="stTab"] { flex: 1 1 0; height: 48px; min-width: 0; border: 1px solid transparent; border-radius: 9px; color: #8e9aa8; font-weight: 600; transition: background-color .18s ease, border-color .18s ease, color .18s ease; }
+    .stTabs [data-testid="stTab"]:hover { color: #ffffff !important; background: #13191e !important; }
+    .stTabs [data-testid="stTab"][aria-selected="true"] { position: relative; padding-right: 32px; color: #ffffff !important; border: 0 !important; border-radius: 0 !important; background: transparent !important; box-shadow: none !important; }
+    .stTabs [data-baseweb="tab-highlight"], .stTabs .react-aria-SelectionIndicator { display: none !important; }
+    .stTabs [data-testid="stTab"][aria-selected="true"]::after { content: "✓"; position: absolute; top: 50%; right: 13px; border: 0 !important; background: transparent !important; color: #13d5af; font-size: 17px; font-weight: 700; line-height: 1; transform: translateY(-50%); }
+    .stTabs [data-testid="stTab"] p { color: inherit !important; font-size: .9rem; }
+    .stTabs [data-baseweb="tab-panel"], .stTabs [role="tabpanel"] { margin-top: 0; padding: 72px 10px 24px !important; border: 1px solid #1f2a35; border-radius: 22px; background: #07090b !important; box-shadow: inset 0 1px 0 rgba(255,255,255,.02), 0 14px 32px rgba(0,0,0,.18); }
+    .matrix-shell { overflow: auto; max-height: 430px; border: 1px solid #29364d; border-radius: 8px; }
+    table.kpi-matrix { width: 100%; border-collapse: collapse; background: #070b11; font-size: .8rem; }
+    table.kpi-matrix th { position: sticky; top: 0; padding: 10px; background: #0d1522 !important; color: #fff !important; text-align: center; }
+    table.kpi-matrix td { padding: 9px 10px; border-bottom: 1px solid #1d2939; color: #f4f8ff; text-align: center; }
+    .participation-shell { overflow: auto; max-height: 520px; border: 1px solid #29364d; border-radius: 8px; background: #000000; }
+    table.participation-table { width: 100%; border-collapse: collapse; background: #000000 !important; font-size: .8rem; }
+    table.participation-table th { position: sticky; z-index: 1; top: 0; padding: 11px 10px; border-bottom: 1px solid #334155; background: #05080d !important; color: #ffffff !important; text-align: center; white-space: nowrap; }
+    table.participation-table td { padding: 9px 10px; border-bottom: 1px solid #1d2939; background: #000000 !important; color: #ffffff !important; text-align: center; white-space: nowrap; }
+    table.participation-table tbody tr:hover td { background: #101725 !important; }
+    .percentage-signal { display: inline-flex; align-items: center; gap: 7px; color: #ffffff; font-weight: 700; }
+    .percentage-signal-icon { color: var(--signal); font-size: 14px; line-height: 1; }
+    .variation-signal { display: inline-flex; align-items: center; justify-content: center; gap: 6px; color: var(--signal); font-weight: 700; white-space: nowrap; }
+    .variation-icon { display: inline-grid; width: 20px; height: 20px; place-items: center; border: 1px solid var(--signal); border-radius: 50%; background: color-mix(in srgb, var(--signal) 14%, transparent); font-size: 11px; line-height: 1; }
+    .insight-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+    .insight { min-height: 170px; padding: 16px; border: 1px solid #29364d; border-left: 4px solid var(--signal); border-radius: 8px; background: #101725; }
+    .insight-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .insight-label { color: #d6dfec; font-size: .76rem; font-weight: 700; text-transform: uppercase; }
+    .insight-status { color: var(--signal); font-size: .68rem; font-weight: 700; text-transform: uppercase; }
+    .insight strong { display: block; margin: 17px 0 8px; color: #f4f8ff; font-family: 'Space Grotesk'; }
+    .insight p { margin: 0; color: #aab5c7; font-size: .86rem; line-height: 1.45; }
+    @media (max-width: 1180px) { .kpi-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+    @media (max-width: 1000px) { .kpi-grid, .insight-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @media (max-width: 600px) { .kpi-section { padding: 13px; border-radius: 12px; } .kpi-grid, .insight-grid { grid-template-columns: 1fr; } .dashboard-banner { min-height: 210px; padding: 24px 20px; } .banner-content { max-width: 100%; } .dashboard-banner h1 { font-size: 28px !important; } .dashboard-banner p { max-width: 88%; font-size: .84rem; line-height: 1.5; } .banner-network { inset: 40% -15% 0 42%; opacity: .32; } }
     </style>
     """,
     unsafe_allow_html=True,
@@ -413,904 +168,471 @@ def format_number(value: float) -> str:
     return f"{value:,.0f}".replace(",", ".")
 
 
-def format_compact(value: float) -> str:
-    if abs(value) >= 1_000_000:
-        return f"{value / 1_000_000:.1f}M"
-    if abs(value) >= 1_000:
-        return f"{value / 1_000:.0f}K"
-    return f"{value:.0f}"
-
-
-def format_pct(value: float | None) -> str:
+def format_pct(value: float | None, signed: bool = False) -> str:
     if value is None or pd.isna(value):
         return "Sin base"
-    return f"{value:+.1f}%".replace(".", ",")
+    pattern = "+.2f" if signed else ".2f"
+    return f"{value:{pattern}}%".replace(".", ",")
 
 
 @st.cache_data(show_spinner="Consolidando archivos CSV...")
 def load_data(file_signature: tuple[tuple[str, int, int], ...]) -> pd.DataFrame:
-    files = [DATA_DIR / name for name, _, _ in file_signature]
-    return load_and_consolidate(files)
+    return load_and_consolidate(DATA_DIR / name for name, _, _ in file_signature)
 
 
 def style_figure(figure: go.Figure, height: int = 390) -> go.Figure:
     figure.update_layout(
         height=height,
-        margin=dict(l=12, r=12, t=48, b=12),
+        margin=dict(l=12, r=12, t=58, b=12),
         paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(19,28,44,.76)",
-        font=dict(family="DM Sans", color="#ffffff"),
-        title_font=dict(family="Space Grotesk", size=17, color="#ffffff"),
-        legend=dict(font=dict(color="#ffffff"), title_font=dict(color="#ffffff")),
+        plot_bgcolor="rgba(0,0,0,0)",
+        font=dict(family="DM Sans", color="#FFFFFF"),
+        title_font=dict(family="Space Grotesk", size=17, color="#FFFFFF"),
+        legend=dict(font=dict(color="#FFFFFF"), title_font=dict(color="#FFFFFF")),
         legend_title_text="",
-        hoverlabel=dict(bgcolor="#101725", font_color="#edf3fc"),
+        hoverlabel=dict(bgcolor="#101725", font_color="#FFFFFF"),
     )
-    figure.update_xaxes(gridcolor=COLORS["grid"], zeroline=False)
-    figure.update_yaxes(gridcolor=COLORS["grid"], zeroline=False)
+    figure.update_xaxes(gridcolor=COLORS["grid"], zeroline=False, title_font=dict(color="#FFFFFF"), tickfont=dict(color="#FFFFFF"))
+    figure.update_yaxes(gridcolor=COLORS["grid"], zeroline=False, title_font=dict(color="#FFFFFF"), tickfont=dict(color="#FFFFFF"))
     return figure
 
 
-def top_breakdown(frame: pd.DataFrame, dimension: str, limit: int = 12) -> pd.DataFrame:
-    values = frame.copy()
-    values[dimension] = values[dimension].astype("string").fillna("Sin dato").replace("", "Sin dato")
-    return (
-        values.groupby(dimension, as_index=False, dropna=False)["cuenta"]
-        .sum()
-        .nlargest(limit, "cuenta")
-        .sort_values("cuenta")
-    )
+def rate(frame: pd.DataFrame, metric: str) -> float:
+    total = float(frame["cuenta"].sum())
+    return float(frame[metric].sum() / total * 100) if total else 0.0
 
 
-def weighted_rate(frame: pd.DataFrame, column: str) -> float:
-    total = frame["cuenta"].sum()
-    if total == 0:
-        return 0.0
-    mask = frame[column].fillna(False).astype(bool)
-    return float(frame.loc[mask, "cuenta"].sum() / total * 100)
-
-
-def average_monthly_rate(frame: pd.DataFrame, column: str) -> float:
-    working = frame[["mes", "cuenta", column]].copy()
-    working["ponderado"] = working["cuenta"] * working[column].fillna(False).astype(bool)
-    monthly = working.groupby("mes", as_index=False).agg(total=("cuenta", "sum"), ponderado=("ponderado", "sum"))
-    valid = monthly[monthly["total"].gt(0)]
-    if valid.empty:
-        return 0.0
-    return float((valid["ponderado"] / valid["total"] * 100).mean())
-
-
-def benchmark_signal(value: float, benchmark: float, high_is_good: bool) -> tuple[str, str]:
-    tolerance = max(abs(benchmark) * 0.05, 0.01)
-    difference = value - benchmark
-    if abs(difference) <= tolerance:
-        return COLORS["amber"], "En promedio"
-    is_favorable = difference > 0 if high_is_good else difference < 0
-    return (COLORS["mint"], "Mejor que promedio") if is_favorable else (COLORS["red"], "Peor que promedio")
-
-
-def build_kpi_matrix(frame: pd.DataFrame, period: str) -> tuple[pd.DataFrame, str]:
-    working = frame.copy()
-    working["_fallidos"] = working["cuenta"] * working["failed"].fillna(False).astype(bool)
-    working["_excluidos"] = working["cuenta"] * working["excluded"].fillna(False).astype(bool)
-    working["_facturados"] = working["cuenta"] * working["billed"].fillna(False).astype(bool)
-
-    period_map = {"Month": "mes", "Day": "fecha", "Hour": "hora"}
-    period_column = period_map.get(period, "mes")
-    matrix = (
-        working.groupby(period_column, as_index=False)
-        .agg(
-            Mensajes=("cuenta", "sum"),
-            Fallidos=("_fallidos", "sum"),
-            Excluidos=("_excluidos", "sum"),
-            Facturados=("_facturados", "sum"),
-        )
-        .sort_values(period_column)
-    )
-
-    if period == "Month":
-        averages = working.groupby(["mes", "fecha"])["cuenta"].sum().groupby("mes").mean()
-        matrix["Promedio operativo"] = matrix[period_column].map(averages)
-        average_label = "Promedio diario"
-        matrix["Periodo"] = matrix[period_column].map(lambda value: month_names_es(value.month))
-    elif period == "Day":
-        averages = working.groupby(["fecha", "hora"])["cuenta"].sum().groupby("fecha").mean()
-        matrix["Promedio operativo"] = matrix[period_column].map(averages)
-        average_label = "Promedio por hora"
-        matrix["Periodo"] = matrix[period_column].dt.strftime("%d/%m/%Y")
+def progress_cell_style(value: float, maximum: float, average: float, high_is_good: bool) -> str:
+    if pd.isna(value):
+        return ""
+    if high_is_good:
+        color = COLORS["mint"] if value > average * 1.05 else COLORS["red"] if value < average * 0.95 else COLORS["amber"]
     else:
-        averages = working.groupby(["hora", "fecha"])["cuenta"].sum().groupby("hora").mean()
-        matrix["Promedio operativo"] = matrix[period_column].map(averages)
-        average_label = "Promedio diario"
-        matrix["Periodo"] = matrix[period_column].map(lambda value: f"{int(value):02d}:00")
-
-    total = matrix["Mensajes"].sum()
-    matrix["Participación"] = matrix["Mensajes"] / total * 100 if total else 0.0
-    matrix["Variación"] = matrix["Mensajes"].pct_change(fill_method=None) * 100
-    matrix["Tasa de fallos"] = matrix["Fallidos"] / matrix["Mensajes"] * 100
-    matrix["Tasa de exclusión"] = matrix["Excluidos"] / matrix["Mensajes"] * 100
-    matrix["Facturación"] = matrix["Facturados"] / matrix["Mensajes"] * 100
-    matrix = matrix.rename(columns={"Promedio operativo": average_label})
-    return matrix[["Periodo", "Mensajes", average_label, "Participación", "Variación", "Tasa de fallos", "Tasa de exclusión", "Facturación"]], average_label
+        color = COLORS["red"] if value > average * 1.05 else COLORS["mint"] if value < average * 0.95 else COLORS["amber"]
+    width = min(max(value / maximum * 100, 0), 100) if maximum else 0
+    return f"background:linear-gradient(90deg,{color}99 0%,{color}99 {width:.1f}%,transparent {width:.1f}%,transparent 100%) !important;color:#ffffff;font-weight:700"
 
 
-def build_dimension_kpi_matrix(frame: pd.DataFrame, dimension: str) -> pd.DataFrame:
-    working = frame.copy()
-    dimension_label = DIMENSION_LABELS[dimension]
-    working["_fallidos"] = working["cuenta"] * working["failed"].fillna(False).astype(bool)
-    working["_excluidos"] = working["cuenta"] * working["excluded"].fillna(False).astype(bool)
-    working["_facturados"] = working["cuenta"] * working["billed"].fillna(False).astype(bool)
-    if dimension in {"billed", "failed"}:
-        working[dimension] = working[dimension].map({True: "Sí", False: "No"}).fillna("Sin dato")
+def format_percentage_signal(value: float, maximum: float, average: float, high_is_good: bool) -> str:
+    if pd.isna(value):
+        return ""
+    if high_is_good:
+        color = COLORS["mint"] if value > average * 1.05 else COLORS["red"] if value < average * 0.95 else COLORS["amber"]
     else:
-        working[dimension] = working[dimension].astype("string").fillna("Sin dato").replace("", "Sin dato")
-    matrix = (
-        working.groupby(dimension, as_index=False, dropna=False)
-        .agg(
-            Mensajes=("cuenta", "sum"),
-            Fallidos=("_fallidos", "sum"),
-            Excluidos=("_excluidos", "sum"),
-            Facturados=("_facturados", "sum"),
-        )
-        .sort_values("Mensajes", ascending=False)
-    )
-
-    daily_average = working.groupby([dimension, "fecha"])["cuenta"].sum().groupby(dimension).mean()
-    matrix["Promedio diario"] = matrix[dimension].map(daily_average)
-    total = matrix["Mensajes"].sum()
-    matrix["Participación"] = matrix["Mensajes"] / total * 100 if total else 0.0
-    matrix["Tasa de fallos"] = matrix["Fallidos"] / matrix["Mensajes"] * 100
-    matrix["Tasa de exclusión"] = matrix["Excluidos"] / matrix["Mensajes"] * 100
-    matrix["Facturación"] = matrix["Facturados"] / matrix["Mensajes"] * 100
-
-    max_date = working["fecha"].max()
-    current_month = max_date.to_period("M")
-    previous_month = current_month - 1
-    current_values = (
-        working.loc[working["fecha"].dt.to_period("M").eq(current_month)]
-        .groupby(dimension)["cuenta"]
-        .sum()
-    )
-    previous_values = (
-        working.loc[
-            working["fecha"].dt.to_period("M").eq(previous_month) & working["fecha"].dt.day.le(max_date.day)
-        ]
-        .groupby(dimension)["cuenta"]
-        .sum()
-    )
-    matrix["Variación MTD"] = matrix[dimension].map(
-        lambda value: percent_change(float(current_values.get(value, 0)), float(previous_values.get(value, 0)))
-    )
-    return matrix.rename(columns={dimension: dimension_label})[
-        [dimension_label, "Mensajes", "Promedio diario", "Participación", "Variación MTD", "Tasa de fallos", "Tasa de exclusión", "Facturación"]
-    ]
+        color = COLORS["red"] if value > average * 1.05 else COLORS["mint"] if value < average * 0.95 else COLORS["amber"]
+    return f'<span class="percentage-signal" style="--signal:{color}"><span class="percentage-signal-icon">●</span>{format_pct(value)}</span>'
 
 
-def month_names_es(month: int) -> str:
-    return {
-        1: "January", 2: "February", 3: "March", 4: "April", 5: "May", 6: "June",
-        7: "July", 8: "August", 9: "September", 10: "October", 11: "November", 12: "December",
-    }[month]
-
-
-def build_insights(frame: pd.DataFrame) -> list[tuple[str, str, str, str, str, str]]:
-    if frame.empty:
-        return [("ALERT", "Short term", "!", "No data to analyze", "Widen the filters to generate alerts.", COLORS["red"])] * 6
-
-    comparison = current_month_comparison(frame)
-    variation = comparison["variation"]
-    if variation is None:
-        trend_level, trend_color = "ATTENTION", COLORS["amber"]
-    elif abs(variation) >= 15:
-        trend_level, trend_color = "ALERT", COLORS["red"]
-    elif abs(variation) >= 5:
-        trend_level, trend_color = "ATTENTION", COLORS["amber"]
+def format_variation(value: float) -> str:
+    if pd.isna(value):
+        return ""
+    if value > 0:
+        color, icon = COLORS["mint"], "▲"
+    elif value < 0:
+        color, icon = COLORS["red"], "▼"
     else:
-        trend_level, trend_color = "STABLE", COLORS["mint"]
+        color, icon = COLORS["amber"], "•"
+    return f'<span class="variation-signal" style="--signal:{color}"><span class="variation-icon">{icon}</span>{value:+.2f}%</span>'
 
-    providers = top_breakdown(frame, "provider", 2).sort_values("cuenta", ascending=False)
-    leading_provider = str(providers.iloc[0]["provider"])
-    concentration = float(providers.iloc[0]["cuenta"] / frame["cuenta"].sum() * 100)
-    if concentration >= 50:
-        concentration_level, concentration_color = "ALERT", COLORS["red"]
-    elif concentration >= 30:
-        concentration_level, concentration_color = "ATTENTION", COLORS["amber"]
+
+def build_matrix(frame: pd.DataFrame, period_label: str) -> pd.DataFrame:
+    period = {"Mes": "mes", "Día": "fecha", "Hora": "hora"}[period_label]
+    matrix = frame.groupby(period, as_index=False)[list(METRIC_LABELS)].sum().sort_values(period)
+    if period_label == "Mes":
+        matrix["Periodo"] = matrix[period].map(lambda value: f"{MONTH_NAMES[value.month]} {value.year}")
+    elif period_label == "Día":
+        matrix["Periodo"] = matrix[period].dt.strftime("%d/%m/%Y")
     else:
-        concentration_level, concentration_color = "STABLE", COLORS["mint"]
+        matrix["Periodo"] = matrix[period].map(lambda value: f"{int(value):02d}:00")
+    matrix["% Facturados"] = matrix["facturados"].div(matrix["cuenta"]).mul(100)
+    matrix["% Fallidos"] = matrix["fallidos"].div(matrix["cuenta"]).mul(100)
+    matrix["% Excluidos"] = matrix["excluidos"].div(matrix["cuenta"]).mul(100)
+    matrix["Variación mensajes"] = matrix["cuenta"].pct_change(fill_method=None).mul(100)
+    matrix = matrix.rename(columns=METRIC_LABELS)
+    return matrix[["Periodo", "Mensajes", "Variación mensajes", "Facturados", "% Facturados", "Fallidos", "% Fallidos", "Excluidos", "% Excluidos"]]
 
+
+def build_heatmap(frame: pd.DataFrame, metric: str, as_rate: bool) -> go.Figure:
+    day_order = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+    day_labels = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"]
+    values = frame.pivot_table(index="hora", columns="dia_semana", values=metric, aggfunc="sum", fill_value=0).reindex(index=range(24), columns=day_order, fill_value=0)
+    if as_rate:
+        totals = frame.pivot_table(index="hora", columns="dia_semana", values="cuenta", aggfunc="sum", fill_value=0).reindex(index=range(24), columns=day_order, fill_value=0)
+        values = values.div(totals.where(totals.gt(0))).mul(100).fillna(0)
+        labels = values.map(lambda value: f"{value:.2f}%")
+        title, colorbar, hover = f"Tasa de {METRIC_LABELS[metric].lower()} por día y hora", dict(title=dict(text="Tasa", font=dict(color="#FFFFFF")), tickfont=dict(color="#FFFFFF"), ticksuffix="%"), "%{x} · %{y}:00<br>%{z:.2f}%<extra></extra>"
+    else:
+        labels = values.map(lambda value: f"{value / 1_000_000:.1f}M" if value >= 1_000_000 else f"{value / 1_000:.0f}K" if value >= 1_000 else f"{value:.0f}")
+        title, colorbar, hover = f"Intensidad de {METRIC_LABELS[metric].lower()} por día y hora", dict(title=dict(text=METRIC_LABELS[metric], font=dict(color="#FFFFFF")), tickfont=dict(color="#FFFFFF"), tickformat="~s"), "%{x} · %{y}:00<br>%{z:,.0f}<extra></extra>"
+    scale = [[0, "#162132"], [.5, COLORS["amber"]], [1, COLORS["red"] if metric in {"fallidos", "excluidos"} else COLORS["mint"]]]
+    figure = go.Figure(go.Heatmap(z=values.values, x=day_labels, y=values.index, text=labels.values, texttemplate="%{text}", textfont=dict(color="#FFFFFF"), colorscale=scale, colorbar=colorbar, xgap=2, ygap=2, hovertemplate=hover))
+    figure = style_figure(figure, 455)
+    figure.update_layout(title=dict(text=title, font=dict(family="Space Grotesk", size=17, color="#FFFFFF")))
+    return figure
+
+
+def build_insights(frame: pd.DataFrame, comparison_frame: pd.DataFrame) -> list[tuple[str, str, str, str, str]]:
+    total = float(frame["cuenta"].sum())
+    billed_rate = rate(frame, "facturados")
+    failed_rate = rate(frame, "fallidos")
+    excluded_rate = rate(frame, "excluidos")
+    comparison = current_month_comparison(comparison_frame, "cuenta")
     daily = frame.groupby("fecha", as_index=False)["cuenta"].sum()
-    peak_day = daily.loc[daily["cuenta"].idxmax()]
     hourly = frame.groupby("hora", as_index=False)["cuenta"].sum()
-    peak_hour = hourly.loc[hourly["cuenta"].idxmax()]
-    peak_hour_share = float(peak_hour["cuenta"] / hourly["cuenta"].sum() * 100)
-    peak_day_ratio = float(peak_day["cuenta"] / daily["cuenta"].mean())
-    if peak_day_ratio >= 1.5:
-        peak_level, peak_color = "ALERTA", COLORS["red"]
-    elif peak_day_ratio >= 1.2:
-        peak_level, peak_color = "ATENCIÓN", COLORS["amber"]
-    else:
-        peak_level, peak_color = "ESTABLE", COLORS["mint"]
-
-    failed_rate = weighted_rate(frame, "failed")
-    failed_benchmark = average_monthly_rate(frame, "failed")
-    failed_color, failed_status = benchmark_signal(failed_rate, failed_benchmark, high_is_good=False)
-    failed_level = "ALERTA" if failed_color == COLORS["red"] else "ATENCIÓN" if failed_color == COLORS["amber"] else "ESTABLE"
-
-    provider_risk = frame.copy()
-    provider_risk["provider"] = provider_risk["provider"].astype("string").fillna("Sin dato").replace("", "Sin dato")
-    provider_risk["fallidos"] = provider_risk["cuenta"] * provider_risk["failed"].fillna(False).astype(bool)
-    provider_risk = provider_risk.groupby("provider", as_index=False).agg(Mensajes=("cuenta", "sum"), Fallidos=("fallidos", "sum"))
-    provider_risk["Tasa"] = provider_risk["Fallidos"] / provider_risk["Mensajes"] * 100
-    worst_provider = provider_risk.sort_values("Fallidos", ascending=False).iloc[0]
-    worst_share = float(worst_provider["Fallidos"] / max(provider_risk["Fallidos"].sum(), 1) * 100)
-    if worst_share >= 40:
-        provider_level, provider_color = "ALERTA", COLORS["red"]
-    elif worst_share >= 20:
-        provider_level, provider_color = "ATENCIÓN", COLORS["amber"]
-    else:
-        provider_level, provider_color = "ESTABLE", COLORS["mint"]
-
-    billed_rate = weighted_rate(frame, "billed")
-    billed_benchmark = average_monthly_rate(frame, "billed")
-    billed_color, billed_status = benchmark_signal(billed_rate, billed_benchmark, high_is_good=True)
-    billed_level = "ALERTA" if billed_color == COLORS["red"] else "ATENCIÓN" if billed_color == COLORS["amber"] else "ESTABLE"
-    unbilled_messages = float(frame["cuenta"].sum() * (100 - billed_rate) / 100)
-
+    providers = frame.groupby("provider", as_index=False)["cuenta"].sum().sort_values("cuenta", ascending=False)
+    peak_day, peak_hour, top_provider = daily.loc[daily["cuenta"].idxmax()], hourly.loc[hourly["cuenta"].idxmax()], providers.iloc[0]
+    peak_hour_share = float(peak_hour["cuenta"] / total * 100) if total else 0.0
+    top_provider_share = float(top_provider["cuenta"] / total * 100) if total else 0.0
+    variation = comparison["variation"]
+    trend_status = "Sin base" if variation is None else "Al alza" if variation > 5 else "A la baja" if variation < -5 else "Estable"
+    trend_color = COLORS["amber"] if variation is None else COLORS["mint"] if variation >= -5 else COLORS["red"]
+    failed_status, failed_color = ("Atención", COLORS["red"]) if failed_rate > 1 else ("Controlado", COLORS["mint"])
     return [
-        (
-            trend_level,
-            "Corto plazo · 7 días",
-            "↗",
-            f"El volumen cambió {format_pct(variation)}",
-            f"Al día {comparison['cutoff_day']} van {format_number(comparison['current'])} mensajes frente a {format_number(comparison['previous'])} el mes pasado. Acción: ajuste capacidad y previsión de envíos para la próxima semana.",
-            trend_color,
-        ),
-        (
-            failed_level,
-            "Corto plazo · 24 horas",
-            "!",
-            f"Fallan {failed_rate:.1f} de cada 100 mensajes",
-            f"El promedio mensual es {failed_benchmark:.2f}% ({failed_status.lower()}). Acción: revise hoy los códigos de error y los proveedores con más fallos.",
-            failed_color,
-        ),
-        (
-            provider_level,
-            "Corto plazo · 48 horas",
-            "◆",
-            f"{worst_provider['provider']} aporta más fallos",
-            f"Genera {worst_share:.1f}% de todos los mensajes fallidos y falla en {worst_provider['Tasa']:.2f}% de sus envíos. Acción: valide su ruta y acuerde un plan de corrección.",
-            provider_color,
-        ),
-        (
-            concentration_level,
-            "Mediano plazo · 30 días",
-            "◎",
-            f"{leading_provider} mueve {concentration:.1f}% del tráfico",
-            "Una alta dependencia puede afectar la continuidad si ese proveedor falla. Acción: defina capacidad de respaldo y límites de distribución por proveedor.",
-            concentration_color,
-        ),
-        (
-            peak_level,
-            "Corto plazo · 7 días",
-            "◷",
-            f"La mayor carga ocurre a las {int(peak_hour['hora']):02d}:00",
-            f"Esa hora concentra {peak_hour_share:.1f}% del volumen. El día pico fue {peak_day['fecha']:%d/%m/%Y}. Acción: reserve capacidad y monitoreo reforzado en esa franja.",
-            peak_color,
-        ),
-        (
-            billed_level,
-            "Mediano plazo · 30 días",
-            "✓",
-            f"Hay {format_number(unbilled_messages)} mensajes no facturados",
-            f"La facturación está en {billed_rate:.2f}% y su promedio mensual es {billed_benchmark:.2f}% ({billed_status.lower()}). Acción: concilie proveedores y tipos de mensaje antes del cierre.",
-            billed_color,
-        ),
+        ("Volumen MTD", trend_status, f"Variación {format_pct(variation, True)}", f"{format_number(float(comparison['current']))} mensajes frente a {format_number(float(comparison['previous']))} al mismo corte del mes anterior.", trend_color),
+        ("Facturación", "Participación", format_pct(billed_rate), "Porcentaje de mensajes facturados sobre el total del periodo filtrado.", COLORS["mint"]),
+        ("Fallidos", failed_status, format_pct(failed_rate), "Tasa de mensajes fallidos. Revise proveedores y franjas con mayor concentración.", failed_color),
+        ("Excluidos", "Participación", format_pct(excluded_rate), "Porcentaje de mensajes excluidos sobre el total filtrado.", COLORS["amber"]),
+        ("Pico diario", "Volumen", f"{peak_day['fecha']:%d/%m/%Y}", f"El mayor volumen diario fue de {format_number(float(peak_day['cuenta']))} mensajes.", COLORS["amber"]),
+        ("Pico horario", "Concentración", f"{int(peak_hour['hora']):02d}:00", f"Esta hora concentra {format_pct(peak_hour_share)} del volumen seleccionado.", COLORS["violet"]),
+        ("Proveedor principal", "Participación", escape(str(top_provider["provider"])), f"Concentra {format_pct(top_provider_share)} del total de mensajes filtrados.", COLORS["cyan"]),
     ]
 
 
 files = discover_csv_files(DATA_DIR)
 if not files:
-    st.error("No CSV files were found in the project folder.")
+    st.error("No se encontraron archivos CSV en la carpeta del proyecto.")
     st.stop()
-
 signature = tuple((path.name, path.stat().st_mtime_ns, path.stat().st_size) for path in files)
 try:
     data = load_data(signature)
-except (ValueError, pd.errors.ParserError) as error:
-    st.error(f"It was not possible to consolidate the CSV files: {error}")
+except (ValueError, pd.errors.ParserError, UnicodeDecodeError) as error:
+    st.error(f"No fue posible consolidar los CSV: {error}")
     st.stop()
-
 if data.empty:
-    st.warning("The files do not contain valid records.")
+    st.warning("Los archivos no contienen registros válidos.")
     st.stop()
-
-latest_record = data["fecha_hora"].max()
 
 with st.sidebar:
-    st.markdown("## Filters")
-    min_date = data["fecha"].min().date()
-    max_date = data["fecha"].max().date()
-    available_months = sorted(data["fecha"].dt.to_period("M").unique(), reverse=True)
-    month_options = {"All months": None}
-    month_options.update({f"{month_names_es(period.month)} {period.year}": period for period in available_months})
-    date_filter_mode = st.segmented_control(
-        "Dates",
-        options=["All", "One date", "Range"],
-        default="All",
-        selection_mode="single",
-    )
-    if date_filter_mode == "One date":
-        selected_date = st.date_input("Date", value=max_date, min_value=min_date, max_value=max_date)
-        start_date = end_date = pd.Timestamp(selected_date)
-    elif date_filter_mode == "Range":
-        date_range = st.date_input(
-            "Date range",
-            value=(min_date, max_date),
-            min_value=min_date,
-            max_value=max_date,
+    st.markdown("## Filtros")
+    min_date, max_date = data["fecha"].min().date(), data["fecha"].max().date()
+    st.markdown("**Periodo de análisis**")
+    date_mode = st.segmented_control(
+        "Fechas", ["Todas", "Una fecha", "Rango"], default="Todas", key="date_mode"
+    ) or "Todas"
+    if date_mode == "Una fecha":
+        single_date = st.date_input(
+            "Fecha", value=max_date, min_value=min_date, max_value=max_date, key="single_date"
         )
-        if isinstance(date_range, tuple) and len(date_range) == 2:
-            start_date, end_date = pd.Timestamp(date_range[0]), pd.Timestamp(date_range[1])
-        else:
-            start_date = end_date = pd.Timestamp(date_range)
+        start_date = end_date = pd.Timestamp(single_date)
+    elif date_mode == "Rango":
+        range_left, range_right = st.columns(2)
+        with range_left:
+            range_start = st.date_input(
+                "Desde", value=min_date, min_value=min_date, max_value=max_date, key="range_start"
+            )
+        with range_right:
+            range_end = st.date_input(
+                "Hasta", value=max_date, min_value=min_date, max_value=max_date, key="range_end"
+            )
+        start_date, end_date = pd.Timestamp(range_start), pd.Timestamp(range_end)
     else:
         start_date, end_date = pd.Timestamp(min_date), pd.Timestamp(max_date)
-    selected_month = month_options[st.selectbox("Month", month_options)]
-    selected_provider = st.multiselect("Provider", sorted(data["provider"].dropna().astype(str).unique()))
-    selected_type = st.multiselect("Message type", sorted(data["message_type"].dropna().astype(str).unique()))
-    status = st.selectbox("Status", ["All", "Successful", "Failed", "Excluded"])
+    available_months = sorted(data["fecha"].dt.to_period("M").unique())
+    month_options: dict[str, pd.Period | None] = {"Todos los meses": None}
+    month_options.update({f"{MONTH_NAMES[month.month]} {month.year}": month for month in available_months})
+    selected_month_label = st.selectbox("Mes", list(month_options))
+    selected_month = month_options[selected_month_label]
+    selected_providers = st.multiselect("Proveedor", sorted(data["provider"].unique()))
+    selected_types = st.multiselect("Tipo de mensaje", sorted(data["message_type"].unique()))
+    selected_aliases = st.multiselect("Alias proveedor", sorted(data["alias_provider"].unique()))
+    selected_networks = st.multiselect("Red", sorted(data["network_id"].unique()))
+    selected_reasons = st.multiselect("Motivo", sorted(data["reason"].unique()))
     st.divider()
-    st.caption(f"{len(files)} consolidated files")
-    st.caption(f"Last data: {max_date:%d/%m/%Y}")
-dimension_filtered = data.copy()
-if selected_month is not None:
-    dimension_filtered = dimension_filtered[dimension_filtered["fecha"].dt.to_period("M").eq(selected_month)]
-if selected_provider:
-    dimension_filtered = dimension_filtered[dimension_filtered["provider"].astype(str).isin(selected_provider)]
-if selected_type:
-    dimension_filtered = dimension_filtered[dimension_filtered["message_type"].astype(str).isin(selected_type)]
-if status == "Successful":
-    dimension_filtered = dimension_filtered[~dimension_filtered["failed"].fillna(False) & ~dimension_filtered["excluded"].fillna(False)]
-elif status == "Failed":
-    dimension_filtered = dimension_filtered[dimension_filtered["failed"].fillna(False)]
-elif status == "Excluded":
-    dimension_filtered = dimension_filtered[dimension_filtered["excluded"].fillna(False)]
+    st.caption(f"{len(files)} archivo(s) consolidado(s)")
+    st.caption(f"Último registro: {data['fecha_hora'].max():%d/%m/%Y %H:%M}")
 
-filtered = dimension_filtered[dimension_filtered["fecha"].between(start_date, end_date)]
+dimension_filtered = data.copy()
+for column, selected in {"provider": selected_providers, "message_type": selected_types, "alias_provider": selected_aliases, "network_id": selected_networks, "reason": selected_reasons}.items():
+    if selected:
+        dimension_filtered = dimension_filtered[dimension_filtered[column].isin(selected)]
+if start_date > end_date:
+    st.sidebar.error("La fecha 'Desde' no puede ser posterior a 'Hasta'.")
+    st.stop()
+filtered = dimension_filtered[dimension_filtered["fecha"].between(start_date, end_date)].copy()
+if selected_month is not None:
+    filtered = filtered[filtered["fecha"].dt.to_period("M").eq(selected_month)]
+if filtered.empty:
+    st.warning("No hay datos para la combinación de filtros seleccionada.")
+    st.stop()
 
 st.markdown(
     f"""
     <section class="dashboard-banner">
         <div class="banner-content">
-            <span class="eyebrow">MESSAGING ANALYTICS · AI</span>
-            <h1>Sent Messages</h1>
-            <p>Consolidated monitoring &nbsp;|&nbsp; Period analyzed: <strong>{start_date:%d/%m/%Y} → {end_date:%d/%m/%Y}</strong> &nbsp;|&nbsp; <strong>{len(files)}</strong> CSV consolidated &nbsp;|&nbsp; Last record: <strong>{latest_record:%d/%m/%Y %H:%M}</strong></p>
+            <span class="eyebrow">▥ &nbsp; Analítica de envíos</span>
+            <h1>Mensajes enviados</h1>
+            <p>Monitoreo consolidado &nbsp;|&nbsp; Periodo analizado: <strong>{filtered['fecha'].min():%d/%m/%Y} → {filtered['fecha'].max():%d/%m/%Y}</strong> &nbsp;|&nbsp; <strong>{len(files)}</strong> CSV consolidado(s) &nbsp;|&nbsp; Último registro: <strong>{filtered['fecha_hora'].max():%d/%m/%Y %H:%M}</strong></p>
         </div>
         <div class="banner-network" aria-hidden="true">
-            <span class="edge e1"></span><span class="edge e2"></span><span class="edge e3 faint"></span>
-            <span class="edge e4"></span><span class="edge e5"></span><span class="edge e6 faint"></span><span class="edge e7 faint"></span>
-            <span class="node n1"></span><span class="node blue n2"></span><span class="node n3"></span>
-            <span class="node n4"></span><span class="node blue n5"></span><span class="node n6"></span>
+            <span class="banner-edge be1"></span><span class="banner-edge be2"></span>
+            <span class="banner-edge be3 faint"></span><span class="banner-edge be4"></span>
+            <span class="banner-edge be5"></span><span class="banner-edge be6 faint"></span>
+            <span class="banner-edge be7 faint"></span>
+            <span class="banner-node bn1"></span><span class="banner-node blue bn2"></span>
+            <span class="banner-node bn3"></span><span class="banner-node bn4"></span>
+            <span class="banner-node blue bn5"></span><span class="banner-node bn6"></span>
         </div>
     </section>
     """,
     unsafe_allow_html=True,
 )
 
-if filtered.empty:
-    st.warning("No data for the selected filter combination.")
-    st.stop()
+totals = {metric: float(filtered[metric].sum()) for metric in METRIC_LABELS}
+billed_rate, failed_rate, excluded_rate = (rate(filtered, metric) for metric in ("facturados", "fallidos", "excluidos"))
+comparison_data = dimension_filtered[dimension_filtered["fecha"].le(filtered["fecha"].max())]
+comparisons = {metric: current_month_comparison(comparison_data, metric) for metric in METRIC_LABELS}
+cards = [
+    ("Total de mensajes", format_number(totals["cuenta"]), "Σ", COLORS["cyan"], f"MTD vs. mes anterior: {format_pct(comparisons['cuenta']['variation'], True)}"),
+    ("Facturados", format_number(totals["facturados"]), "↗", COLORS["mint"], f"MTD vs. mes anterior: {format_pct(comparisons['facturados']['variation'], True)}"),
+    ("Fallidos", format_number(totals["fallidos"]), "!", COLORS["red"], f"MTD vs. mes anterior: {format_pct(comparisons['fallidos']['variation'], True)}"),
+    ("% facturados", format_pct(billed_rate), "%", COLORS["mint"], "Sobre el total filtrado"),
+    ("% fallidos", format_pct(failed_rate), "%", COLORS["red"], "Sobre el total filtrado"),
+    ("% excluidos", format_pct(excluded_rate), "%", COLORS["amber"], f"{format_number(totals['excluidos'])} mensajes excluidos"),
+]
+card_html = "".join(f'<article class="kpi-card" style="--accent:{color}"><div class="kpi-head"><span class="kpi-label">{label}</span><span class="kpi-icon">{icon}</span></div><div class="kpi-value">{value}</div><div class="kpi-note"><strong>{note}</strong></div></article>' for label, value, icon, color, note in cards)
+st.markdown(f'<section class="kpi-section"><div class="section-kicker">Indicadores clave de gestión</div><div class="kpi-grid">{card_html}</div></section>', unsafe_allow_html=True)
 
-comparison = current_month_comparison(dimension_filtered)
-total = float(filtered["cuenta"].sum())
-failed_rate = weighted_rate(filtered, "failed")
-excluded_rate = weighted_rate(filtered, "excluded")
-average_daily = float(filtered.groupby("fecha")["cuenta"].sum().mean())
-
-st.markdown(
-    f"""
-    <section class="kpi-grid" aria-label="Indicadores principales">
-        <article class="kpi-card" data-tone="mint">
-            <div class="kpi-head"><span class="kpi-label">Messages sent</span><span class="kpi-icon">➤</span></div>
-            <div class="kpi-value">{format_number(total)}</div>
-        </article>
-        <article class="kpi-card" data-tone="cyan">
-            <div class="kpi-head"><span class="kpi-label">Messages read</span><span class="kpi-icon">✓</span></div>
-            <div class="kpi-value">{format_number(total * (1 - failed_rate / 100))}</div>
-        </article>
-        <article class="kpi-card" data-tone="amber">
-            <div class="kpi-head"><span class="kpi-label">Failed messages</span><span class="kpi-icon">×</span></div>
-            <div class="kpi-value">{format_number(total * failed_rate / 100)}</div>
-        </article>
-        <article class="kpi-card" data-tone="red">
-            <div class="kpi-head"><span class="kpi-label">Billed messages</span><span class="kpi-icon">$</span></div>
-            <div class="kpi-value">{format_number(total * (1 - excluded_rate / 100))}</div>
-        </article>
-        <article class="kpi-card" data-tone="teal">
-            <div class="kpi-head"><span class="kpi-label">% read</span><span class="kpi-icon">✓</span></div>
-            <div class="kpi-value">{(100 - failed_rate):.2f}%</div>
-        </article>
-        <article class="kpi-card" data-tone="red">
-            <div class="kpi-head"><span class="kpi-label">% failed</span><span class="kpi-icon">!</span></div>
-            <div class="kpi-value">{failed_rate:.2f}%</div>
-        </article>
-        <article class="kpi-card" data-tone="pink">
-            <div class="kpi-head"><span class="kpi-label">% billable</span><span class="kpi-icon">$</span></div>
-            <div class="kpi-value">{(100 - excluded_rate):.2f}%</div>
-        </article>
-    </section>
-    """,
-    unsafe_allow_html=True,
-)
-
-timeline_tab, mix_tab, quality_tab, insights_tab = st.tabs(
-    ["Volume trend", "Mix & providers", "Operational quality", "Insights"]
-)
-
-with timeline_tab:
-    st.subheader("Volume trend")
-    period_label = st.segmented_control("Granularity", ["Month", "Day", "Hour"], default="Month")
-    period_map = {"Month": "mes", "Day": "fecha", "Hour": "hora"}
-    period = period_map[period_label]
-    timeline = aggregate_with_variation(filtered, period)
-    if period == "fecha":
-        timeline = filtered.groupby("dia", as_index=False)["cuenta"].sum().sort_values("dia")
-        timeline["variacion"] = timeline["cuenta"].pct_change(fill_method=None) * 100
-        timeline["fecha"] = timeline["dia"]
-    month_names = {
-        1: "January", 2: "February", 3: "March", 4: "April", 5: "May", 6: "June",
-        7: "July", 8: "August", 9: "September", 10: "October", 11: "November", 12: "December",
-    }
-    month_ticks = pd.Series(dtype="datetime64[ns]")
-    month_labels: list[str] = []
-    month_axis_range: list[pd.Timestamp] = []
-    day_ticks: list[int] = []
-    if period == "mes":
-        month_ticks = filtered["mes"].drop_duplicates().sort_values()
-        month_labels = [month_names[month.month] for month in month_ticks]
-        axis_padding = pd.Timedelta(days=15)
-        month_axis_range = [timeline[period].min() - axis_padding, timeline[period].max() + axis_padding]
-    elif period == "fecha":
-        day_ticks = list(range(1, 32))
-    left, right = st.columns([1.65, 1])
-    with left:
-        if period == "mes":
-            monthly_values = timeline["cuenta"]
-            low_threshold = monthly_values.quantile(1 / 3)
-            high_threshold = monthly_values.quantile(2 / 3)
-            if low_threshold == high_threshold:
-                bar_colors = [COLORS["amber"]] * len(monthly_values)
+evolution_tab, participation_tab, heatmap_tab, insights_tab = st.tabs(["📊 Evolución y variaciones", "🏛 Participación", "🧑‍💼 Mapas de calor", "💡 Insights"])
+with evolution_tab:
+    control_left, control_right = st.columns(2)
+    with control_left:
+        period_label = st.segmented_control("Granularidad", ["Mes", "Día", "Hora"], default="Mes") or "Mes"
+    with control_right:
+        selected_metric = st.selectbox("Métrica", list(METRIC_LABELS), format_func=METRIC_LABELS.get)
+    period = {"Mes": "mes", "Día": "fecha", "Hora": "hora"}[period_label]
+    timeline = aggregate_with_variation(filtered, period, selected_metric)
+    if period_label == "Mes":
+        timeline["Periodo"] = timeline[period].map(lambda value: f"{MONTH_NAMES[value.month]} {value.year}")
+    elif period_label == "Día":
+        timeline["Periodo"] = timeline["fecha"]
+    elif period_label == "Hora":
+        timeline["Periodo"] = timeline[period].map(lambda value: f"{int(value):02d}:00")
+    chart_left, chart_right = st.columns([1.6, 1])
+    with chart_left:
+        if period_label == "Mes":
+            volume_chart = px.bar(timeline, x="Periodo", y=selected_metric, text_auto="~s", title=f"{METRIC_LABELS[selected_metric]} por {period_label.lower()}", color_discrete_sequence=[METRIC_COLORS[selected_metric]])
+        else:
+            volume_chart = px.line(timeline, x="Periodo", y=selected_metric, markers=True, title=f"{METRIC_LABELS[selected_metric]} por {period_label.lower()}")
+        if period_label == "Mes":
+            monthly_average = float(timeline[selected_metric].mean())
+            if selected_metric in {"fallidos", "excluidos"}:
+                bar_colors = [
+                    MONTH_SIGNAL_COLORS["red"] if value > monthly_average * 1.05
+                    else MONTH_SIGNAL_COLORS["mint"] if value < monthly_average * 0.95
+                    else MONTH_SIGNAL_COLORS["amber"]
+                    for value in timeline[selected_metric]
+                ]
             else:
                 bar_colors = [
-                    COLORS["red"] if value <= low_threshold else COLORS["mint"] if value >= high_threshold else COLORS["amber"]
-                    for value in monthly_values
+                    MONTH_SIGNAL_COLORS["mint"] if value > monthly_average * 1.05
+                    else MONTH_SIGNAL_COLORS["red"] if value < monthly_average * 0.95
+                    else MONTH_SIGNAL_COLORS["amber"]
+                    for value in timeline[selected_metric]
                 ]
-            monthly_average = float(monthly_values.mean())
-            volume_chart = px.bar(
-                timeline,
-                x=period,
-                y="cuenta",
-                text=[format_number(value) for value in timeline["cuenta"]],
-                title="Messages by month",
-                color_discrete_sequence=[COLORS["cyan"]],
-            )
-            volume_chart.update_traces(
-                marker_color=bar_colors,
-                opacity=.9,
-                textposition="outside",
-                textfont=dict(color="#edf3fc", size=12),
-                cliponaxis=False,
-                hovertemplate="%{x|%B %Y}<br>%{y:,.0f} messages<extra></extra>",
-            )
-            volume_chart.add_hline(
-                y=monthly_average,
-                line_color=COLORS["amber"],
-                line_dash="dash",
-                line_width=2,
-                annotation_text=f"Average: {format_number(monthly_average)}",
-                annotation_position="top left",
-                annotation_font_color="#ffffff",
-            )
+            volume_chart.update_traces(marker_color=bar_colors, marker_line_color=bar_colors)
         else:
-            volume_chart = px.line(
-                timeline,
-                x=period,
-                y="cuenta",
-                title=f"Messages by {period_label.lower()}",
-                markers=True,
-                color_discrete_sequence=[COLORS["cyan"]],
-            )
-            if period == "fecha":
-                daily_average = float(timeline["cuenta"].mean())
-                daily_marker_colors = [
-                    COLORS["mint"] if value > daily_average else COLORS["red"] if value < daily_average else COLORS["amber"]
-                    for value in timeline["cuenta"]
+            period_average = float(timeline[selected_metric].mean())
+            if selected_metric in {"fallidos", "excluidos"}:
+                signal_colors = [
+                    MONTH_SIGNAL_COLORS["red"] if value > period_average * 1.05
+                    else MONTH_SIGNAL_COLORS["mint"] if value < period_average * 0.95
+                    else MONTH_SIGNAL_COLORS["amber"]
+                    for value in timeline[selected_metric]
                 ]
-                volume_chart.add_hline(
-                    y=daily_average,
-                    line_color=COLORS["amber"],
-                    line_dash="dash",
-                    line_width=2,
-                    annotation_text=f"Average: {format_number(daily_average)}",
-                    annotation_position="top left",
-                    annotation_font_color="#ffffff",
-                )
             else:
-                daily_marker_colors = COLORS["mint"]
-            volume_chart.update_traces(
-                line_width=2.5,
-                marker=dict(size=7, color=daily_marker_colors, line=dict(width=1.5, color="#0c111c")),
-            )
-        if period == "mes":
+                signal_colors = [
+                    MONTH_SIGNAL_COLORS["mint"] if value > period_average * 1.05
+                    else MONTH_SIGNAL_COLORS["red"] if value < period_average * 0.95
+                    else MONTH_SIGNAL_COLORS["amber"]
+                    for value in timeline[selected_metric]
+                ]
+            volume_chart.update_traces(marker=dict(color=signal_colors, size=8), line=dict(color="#64748B", width=2))
+        if period_label == "Mes":
+            volume_chart.update_traces(textposition="outside", cliponaxis=False)
+        else:
+            volume_chart.update_traces(cliponaxis=False)
+        if period_label == "Día":
             volume_chart.update_xaxes(
-                tickmode="array", tickvals=month_ticks, ticktext=month_labels, title_text="Month", range=month_axis_range
+                title_text="Fecha",
+                tickformat="%d/%m",
+                nticks=12,
             )
-        elif period == "fecha":
-            volume_chart.update_xaxes(
-                tickmode="array", tickvals=day_ticks, ticktext=[str(day) for day in day_ticks],
-                title_text="Day of month", range=[0.5, 31.5]
-            )
-        styled_volume_chart = style_figure(volume_chart)
-        if period == "mes":
-            styled_volume_chart.update_layout(
-                title_font=dict(color="#ffffff", family="Space Grotesk", size=17),
-            )
-        st.plotly_chart(styled_volume_chart, use_container_width=True)
-    with right:
-        variation_data = timeline.dropna(subset=["variacion"])
-        variation_chart = px.bar(
-            variation_data,
-            x=period,
-            y="variacion",
-            title="Variation vs previous period (%)",
-            color="variacion",
-            color_continuous_scale=[[0, COLORS["red"]], [0.5, COLORS["amber"]], [1, COLORS["mint"]]],
-            color_continuous_midpoint=0,
-        )
+        with st.container(border=True):
+            st.plotly_chart(style_figure(volume_chart), width="stretch")
+    with chart_right:
+        variation = timeline.dropna(subset=["variacion"])
+        variation_chart = px.bar(variation, x="Periodo", y="variacion", text=[f"{value:+.2f}%" for value in variation["variacion"]], title="Variación vs. periodo anterior", color="variacion", color_continuous_scale=[[0, COLORS["red"]], [.5, COLORS["amber"]], [1, COLORS["mint"]]], color_continuous_midpoint=0)
+        if period_label == "Mes":
+            variation_colors = [
+                MONTH_SIGNAL_COLORS["mint"] if value > 5 else MONTH_SIGNAL_COLORS["red"] if value < -5 else MONTH_SIGNAL_COLORS["amber"]
+                for value in variation["variacion"]
+            ]
+            variation_chart.update_traces(marker_color=variation_colors, marker_line_color=variation_colors)
+        variation_chart.update_traces(textposition="outside", cliponaxis=False)
         variation_chart.update_layout(coloraxis_showscale=False)
-        variation_chart.update_traces(hovertemplate="%{x}<br>%{y:.2f}%<extra></extra>")
-        variation_chart.update_yaxes(ticksuffix="%", tickformat=".2f")
-        if period == "mes":
-            variation_chart.update_traces(
-                text=[f"{value:+.2f}%" for value in variation_data["variacion"]],
-                texttemplate="%{text}",
-                textposition="outside",
-                textfont=dict(color="#edf3fc", size=12),
-                cliponaxis=False,
-            )
-        if period == "mes":
+        variation_chart.update_yaxes(ticksuffix="%")
+        if period_label == "Día":
             variation_chart.update_xaxes(
-                tickmode="array", tickvals=month_ticks, ticktext=month_labels, title_text="Month", range=month_axis_range
+                title_text="Fecha",
+                tickformat="%d/%m",
+                nticks=12,
             )
-        elif period == "fecha":
-            variation_chart.update_xaxes(
-                tickmode="array", tickvals=day_ticks, ticktext=[str(day) for day in day_ticks],
-                title_text="Day of month", range=[0.5, 31.5]
-            )
-        variation_chart.update_xaxes(tickfont=dict(size=10))
-        st.plotly_chart(style_figure(variation_chart), use_container_width=True)
-
-    heatmap_data = filtered.pivot_table(index="hora", columns="dia_semana", values="cuenta", aggfunc="sum", fill_value=0)
-    day_order = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-    day_labels = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"]
-    heatmap_data = heatmap_data.reindex(columns=day_order, fill_value=0)
-    heatmap_labels = heatmap_data.map(
-        lambda value: f"{value / 1_000_000:.1f}M" if value >= 1_000_000 else f"{value / 1_000:.0f}K"
-    )
-    heatmap = go.Figure(
-        go.Heatmap(
-            z=heatmap_data.values,
-            x=day_labels,
-            y=heatmap_data.index,
-            text=heatmap_labels.values,
-            texttemplate="%{text}",
-            textfont=dict(color="#07110f", size=10),
-            colorscale=[[0, "#e05260"], [.5, "#f2c94c"], [1, "#22c55e"]],
-            colorbar=dict(title="Messages", tickformat="~s"),
-            xgap=2,
-            ygap=2,
-            hovertemplate="%{x} · %{y}:00<br>%{z:,.0f} messages<extra></extra>",
-        )
-    )
-    heatmap = style_figure(heatmap, 430)
-    heatmap.update_layout(
-        title=dict(
-            text="Intensity map by day and hour",
-            font=dict(color="#ffffff", size=20, family="Space Grotesk"),
-            x=0.02,
-            xanchor="left",
-        )
-    )
-    st.plotly_chart(heatmap, use_container_width=True)
-
-    st.subheader("Indicator matrix")
-    matrix_period = st.segmented_control(
-        "Matrix detail", ["Month", "Day", "Hour"], default="Month", key="matrix_period"
-    )
-    matrix_period = matrix_period or "Month"
-    kpi_matrix, average_column = build_kpi_matrix(filtered, matrix_period)
-    base_cell_style = "background-color:#070b11;color:#f4f8ff;border-color:#1d2939;"
-    green_style = "background-color:#123d2d;color:#7ef0b2;font-weight:700;"
-    yellow_style = "background-color:#473817;color:#ffd66b;font-weight:700;"
-    red_style = "background-color:#48202a;color:#ff91a0;font-weight:700;"
-
-    def signal_column(series: pd.Series, high_is_good: bool) -> list[str]:
-        valid = series.dropna()
-        if valid.empty:
-            return [base_cell_style] * len(series)
-
-        low = float(valid.quantile(1 / 3))
-        high = float(valid.quantile(2 / 3))
-        if low == high:
-            return [base_cell_style if pd.isna(value) else yellow_style for value in series]
-
-        styles: list[str] = []
-        for value in series:
-            if pd.isna(value):
-                styles.append(base_cell_style)
-            elif high_is_good and value >= high or not high_is_good and value <= low:
-                styles.append(green_style)
-            elif high_is_good and value <= low or not high_is_good and value >= high:
-                styles.append(red_style)
-            else:
-                styles.append(yellow_style)
-        return styles
-
+        with st.container(border=True):
+            st.plotly_chart(style_figure(variation_chart), width="stretch")
+    matrix_period = st.segmented_control("Detalle", ["Mes", "Día", "Hora"], default="Mes", key="matrix_period") or "Mes"
+    matrix = build_matrix(filtered, matrix_period)
+    billed_max = float(matrix["% Facturados"].max())
+    billed_average = float(matrix["% Facturados"].mean())
+    failed_max = float(matrix["% Fallidos"].max())
+    failed_average = float(matrix["% Fallidos"].mean())
+    excluded_max = float(matrix["% Excluidos"].max())
+    excluded_average = float(matrix["% Excluidos"].mean())
+    matrix_percentage_formatters = {
+        "% Facturados": lambda value: format_percentage_signal(value, billed_max, billed_average, True),
+        "% Fallidos": lambda value: format_percentage_signal(value, failed_max, failed_average, False),
+        "% Excluidos": lambda value: format_percentage_signal(value, excluded_max, excluded_average, False),
+    }
     matrix_style = (
-        kpi_matrix.style
-        .format(
-            {
-                "Mensajes": lambda value: format_number(value),
-                average_column: lambda value: format_number(value),
-                "Participación": "{:.2f}%",
-                "Variación": lambda value: "—" if pd.isna(value) else f"{value:+.2f}%",
-                "Tasa de fallos": "{:.2f}%",
-                "Tasa de exclusión": "{:.2f}%",
-                "Facturación": "{:.2f}%",
-            }
-        )
-        .set_properties(**{"background-color": "#070b11", "color": "#f4f8ff", "border-color": "#1d2939"})
-        .apply(signal_column, high_is_good=True, subset=["Participación"])
-        .apply(signal_column, high_is_good=True, subset=["Variación"])
-        .apply(signal_column, high_is_good=False, subset=["Tasa de fallos"])
-        .apply(signal_column, high_is_good=False, subset=["Tasa de exclusión"])
-        .apply(signal_column, high_is_good=True, subset=["Facturación"])
-        .set_table_styles(
-            [
-                {"selector": "th", "props": [("background-color", "#0d1522"), ("color", "#ffffff"), ("font-weight", "700")]},
-                {"selector": "td", "props": [("border-color", "#1d2939")]},
-            ]
-        )
+        matrix.style
+        .format({"Mensajes": format_number, "Facturados": format_number, "Fallidos": format_number, "Excluidos": format_number, **matrix_percentage_formatters, "Variación mensajes": format_variation}, escape=None)
         .hide(axis="index")
         .set_table_attributes('class="kpi-matrix"')
     )
-    matrix_height = min(420, 42 + len(kpi_matrix) * 37)
-    scroll_class = " scrollable" if len(kpi_matrix) > 10 else ""
-    st.markdown(
-        f'<div class="matrix-shell{scroll_class}" style="max-height:{matrix_height}px">{matrix_style.to_html()}</div>',
-        unsafe_allow_html=True,
-    )
+    with st.container(border=True):
+        st.subheader("Matriz de indicadores")
+        st.markdown(f'<div class="matrix-shell">{matrix_style.to_html()}</div>', unsafe_allow_html=True)
 
-with mix_tab:
-    provider_scatter = filtered.copy()
-    provider_scatter["provider"] = provider_scatter["provider"].astype("string").fillna("Sin dato").replace("", "Sin dato")
-    provider_scatter["mensajes_fallidos"] = (
-        provider_scatter["cuenta"] * provider_scatter["failed"].fillna(False).astype(bool)
-    )
-    provider_scatter = (
-        provider_scatter.groupby("provider", as_index=False)
-        .agg(Volumen=("cuenta", "sum"), Mensajes_fallidos=("mensajes_fallidos", "sum"))
-        .query("Volumen > 0")
-    )
-    provider_scatter["Tasa de fallos"] = provider_scatter["Mensajes_fallidos"] / provider_scatter["Volumen"] * 100
-    provider_scatter["Etiqueta"] = ""
-    top_provider_indexes = provider_scatter.nlargest(10, "Volumen").index
-    provider_scatter.loc[top_provider_indexes, "Etiqueta"] = provider_scatter.loc[top_provider_indexes, "provider"]
-
-    average_volume = float(provider_scatter["Volumen"].mean())
-    average_failure = float(provider_scatter["Tasa de fallos"].mean())
-    provider_scatter_chart = px.scatter(
-        provider_scatter,
-        x="Volumen",
-        y="Tasa de fallos",
-        size="Volumen",
-        color="Tasa de fallos",
-        text="Etiqueta",
-        hover_name="provider",
-        hover_data={"Volumen": ":,.0f", "Tasa de fallos": ":.2f", "Mensajes_fallidos": ":,.0f", "Etiqueta": False},
-        size_max=38,
-        title="Volumen de SMS vs. tasa de fallos por proveedor",
-        color_continuous_scale=[[0, "#22c55e"], [.5, "#f2c94c"], [1, "#e05260"]],
-    )
-    provider_scatter_chart.update_traces(
-        textposition="top center",
-        textfont=dict(color="#ffffff", size=10),
-        marker=dict(line=dict(color="rgba(255,255,255,.65)", width=1), opacity=.82),
-    )
-    provider_scatter_chart.add_vline(
-        x=average_volume,
-        line_width=1.5,
-        line_dash="dash",
-        line_color="#ffffff",
-        annotation_text=f"Volumen promedio · {format_compact(average_volume)}",
-        annotation_position="top left",
-        annotation_font_color="#ffffff",
-    )
-    provider_scatter_chart.add_hline(
-        y=average_failure,
-        line_width=1.5,
-        line_dash="dash",
-        line_color="#ffffff",
-        annotation_text=f"Fallo promedio · {average_failure:.2f}%",
-        annotation_position="bottom right",
-        annotation_font_color="#ffffff",
-    )
-    provider_scatter_chart.update_xaxes(title_text="Volumen de SMS", tickformat="~s", type="log")
-    provider_scatter_chart.update_yaxes(title_text="Tasa de fallos", ticksuffix="%", tickformat=".2f")
-    provider_scatter_chart.update_layout(coloraxis_colorbar=dict(title="Fallos %", ticksuffix="%"))
-    st.plotly_chart(style_figure(provider_scatter_chart, 520), use_container_width=True)
-
-    st.subheader("Traffic mix")
-    traffic_dimensions = ["provider", "message_type", "billed", "failed"]
-    dimension = st.selectbox("Analysis variable", traffic_dimensions, format_func=DIMENSION_LABELS.get)
-    breakdown = top_breakdown(filtered, dimension)
-    category_chart = px.bar(
-        breakdown,
+with participation_tab:
+    participation_control_left, participation_control_right = st.columns(2)
+    with participation_control_left:
+        dimension_label = st.segmented_control("Dimensión", ["Proveedor", "Tipo", "Alias", "Red", "Motivo"], default="Proveedor") or "Proveedor"
+    with participation_control_right:
+        y_axis_options = {
+            "% fallidos": "% Fallidos",
+            "% facturados": "% Facturados",
+            "% excluidos": "% Excluidos",
+        }
+        selected_y_label = st.selectbox("Indicador eje Y", list(y_axis_options))
+        selected_y_metric = y_axis_options[selected_y_label]
+    dimension = {"Proveedor": "provider", "Tipo": "message_type", "Alias": "alias_provider", "Red": "network_id", "Motivo": "reason"}[dimension_label]
+    participation = filtered.groupby(dimension, as_index=False)[list(METRIC_LABELS)].sum()
+    participation["Participación"] = participation["cuenta"].div(participation["cuenta"].sum()).mul(100)
+    participation["% Facturados"] = participation["facturados"].div(participation["cuenta"]).mul(100)
+    participation["% Fallidos"] = participation["fallidos"].div(participation["cuenta"]).mul(100)
+    participation["% Excluidos"] = participation["excluidos"].div(participation["cuenta"]).mul(100)
+    participation = participation.sort_values("cuenta", ascending=False)
+    total_messages = float(participation["cuenta"].sum())
+    average_messages = float(participation["cuenta"].mean())
+    if selected_y_metric == "% Fallidos":
+        global_indicator = float(participation["fallidos"].sum() / total_messages * 100) if total_messages else 0.0
+        color_scale = [[0, COLORS["mint"]], [.5, COLORS["amber"]], [1, COLORS["red"]]]
+        y_axis_title, y_suffix = "% fallidos", "%"
+        global_label = f"Tasa global · {format_pct(global_indicator)}"
+    elif selected_y_metric == "% Facturados":
+        global_indicator = float(participation["facturados"].sum() / total_messages * 100) if total_messages else 0.0
+        color_scale = [[0, COLORS["red"]], [.5, COLORS["amber"]], [1, COLORS["mint"]]]
+        y_axis_title, y_suffix = "% facturados", "%"
+        global_label = f"Tasa global · {format_pct(global_indicator)}"
+    else:
+        global_indicator = float(participation["excluidos"].sum() / total_messages * 100) if total_messages else 0.0
+        color_scale = [[0, COLORS["mint"]], [.5, COLORS["amber"]], [1, COLORS["red"]]]
+        y_axis_title, y_suffix = "% excluidos", "%"
+        global_label = f"Tasa global · {format_pct(global_indicator)}"
+    participation_chart = px.scatter(
+        participation,
         x="cuenta",
-        y=dimension,
-        text=[format_compact(value) for value in breakdown["cuenta"]],
-        orientation="h",
-        title=f"Top 12 · {DIMENSION_LABELS[dimension]}",
-        color="cuenta",
-        color_continuous_scale=[[0, "#17698e"], [1, COLORS["mint"]]],
+        y=selected_y_metric,
+        hover_name=dimension,
+        color=selected_y_metric,
+        color_continuous_scale=color_scale,
+        hover_data={
+            "cuenta": ":,.0f",
+            "% Fallidos": ":.2f",
+            "% Facturados": ":.2f",
+            "% Excluidos": ":.2f",
+            "Participación": ":.2f",
+        },
+        labels={"cuenta": "Mensajes", selected_y_metric: y_axis_title},
+        title=f"Mensajes vs. {selected_y_label.lower()} por {dimension_label.lower()}",
     )
-    category_chart.update_traces(
-        textposition="outside",
-        textfont=dict(color="#ffffff", size=12),
-        cliponaxis=False,
-        hovertemplate=f"%{{y}}<br>%{{x:,.0f}} messages<extra></extra>",
+    participation_chart.update_traces(marker=dict(size=11, line=dict(width=1, color="#0C111C")))
+    participation_chart.add_vline(
+        x=average_messages,
+        line_width=2,
+        line_dash="dash",
+        line_color=COLORS["cyan"],
+        annotation_text=f"Promedio mensajes · {format_number(average_messages)}",
+        annotation_position="top right",
+                annotation_font_color="#FFFFFF",
     )
-    category_chart.update_layout(coloraxis_showscale=False, margin=dict(l=12, r=82, t=48, b=12))
-    st.plotly_chart(style_figure(category_chart, 480), use_container_width=True)
+    participation_chart.add_hline(
+        y=global_indicator,
+        line_width=2,
+        line_dash="dash",
+        line_color=COLORS["amber"],
+        annotation_text=global_label,
+        annotation_position="bottom right",
+        annotation_font_color="#FFFFFF",
+    )
+    participation_chart.update_xaxes(tickformat="~s")
+    participation_chart.update_yaxes(ticksuffix=y_suffix)
+    participation_chart.update_layout(coloraxis_colorbar=dict(title=dict(text=y_axis_title, font=dict(color="#FFFFFF")), tickfont=dict(color="#FFFFFF"), ticksuffix=y_suffix))
+    with st.container(border=True):
+        st.plotly_chart(style_figure(participation_chart, 500), width="stretch")
+    display_participation = participation.rename(columns={dimension: dimension_label, **METRIC_LABELS})
+    display_participation[dimension_label] = display_participation[dimension_label].map(lambda value: escape(str(value)))
+    participation_columns = [dimension_label, "Mensajes", "Participación", "Facturados", "% Facturados", "Fallidos", "% Fallidos", "Excluidos", "% Excluidos"]
+    participation_percentage_columns = {
+        "Participación": True,
+        "% Facturados": True,
+        "% Fallidos": False,
+        "% Excluidos": False,
+    }
+    participation_percentage_formatters = {
+        column: lambda value, column=column, high_is_good=high_is_good: format_percentage_signal(
+            value,
+            float(display_participation[column].max()),
+            float(display_participation[column].mean()),
+            high_is_good,
+        )
+        for column, high_is_good in participation_percentage_columns.items()
+    }
+    participation_style = (
+        display_participation[participation_columns].style
+        .format({
+            "Mensajes": format_number,
+            **participation_percentage_formatters,
+            "Facturados": format_number,
+            "Fallidos": format_number,
+            "Excluidos": format_number,
+        }, escape=None)
+    )
+    participation_style = participation_style.hide(axis="index").set_table_attributes('class="participation-table"')
+    with st.container(border=True):
+        st.markdown(f'<div class="participation-shell">{participation_style.to_html()}</div>', unsafe_allow_html=True)
 
-    st.subheader(f"Indicator matrix by {DIMENSION_LABELS[dimension].lower()}")
-    dimension_matrix = build_dimension_kpi_matrix(filtered, dimension)
-    dimension_matrix_style = (
-        dimension_matrix.style
-        .format(
-            {
-                "Mensajes": lambda value: format_number(value),
-                "Promedio diario": lambda value: format_number(value),
-                "Participación": "{:.2f}%",
-                "Variación MTD": lambda value: "—" if pd.isna(value) else f"{value:+.2f}%",
-                "Tasa de fallos": "{:.2f}%",
-                "Tasa de exclusión": "{:.2f}%",
-                "Facturación": "{:.2f}%",
-            }
-        )
-        .set_properties(**{"background-color": "#070b11", "color": "#f4f8ff", "border-color": "#1d2939"})
-        .apply(signal_column, high_is_good=True, subset=["Participación"])
-        .apply(signal_column, high_is_good=True, subset=["Variación MTD"])
-        .apply(signal_column, high_is_good=False, subset=["Tasa de fallos"])
-        .apply(signal_column, high_is_good=False, subset=["Tasa de exclusión"])
-        .apply(signal_column, high_is_good=True, subset=["Facturación"])
-        .set_table_styles(
-            [
-                {"selector": "th", "props": [("background-color", "#0d1522"), ("color", "#ffffff"), ("font-weight", "700")]},
-                {"selector": "td", "props": [("border-color", "#1d2939")]},
-            ]
-        )
-        .hide(axis="index")
-        .set_table_attributes('class="kpi-matrix"')
-    )
-    dimension_matrix_height = min(420, 42 + len(dimension_matrix) * 37)
-    dimension_scroll_class = " scrollable" if len(dimension_matrix) > 10 else ""
-    st.markdown(
-        f'<div class="matrix-shell{dimension_scroll_class}" style="max-height:{dimension_matrix_height}px">{dimension_matrix_style.to_html()}</div>',
-        unsafe_allow_html=True,
-    )
-
-with quality_tab:
-    st.subheader("Quality and delivery")
-    quality_kpis = [
-        ("Billed", "billed", "✓", True),
-        ("Failed", "failed", "!", False),
-        ("Excluded", "excluded", "×", False),
-        ("Unicode", "is_unicode", "U+", False),
-    ]
-    quality_cards: list[str] = []
-    for label, column, icon, high_is_good in quality_kpis:
-        value = weighted_rate(filtered, column)
-        benchmark = average_monthly_rate(filtered, column)
-        signal_color, signal_label = benchmark_signal(value, benchmark, high_is_good)
-        quality_cards.append(
-            f'<article class="quality-kpi-card" style="--signal:{signal_color}">'
-            f'<div class="quality-kpi-head"><span class="quality-kpi-label">{label}</span>'
-            f'<span class="quality-kpi-icon" aria-label="{label}">{icon}</span></div>'
-            f'<div class="quality-kpi-value">{value:.2f}%</div>'
-            f'<div class="quality-kpi-benchmark">Monthly average · {benchmark:.2f}% · '
-            f'<span class="quality-kpi-status">{signal_label}</span></div></article>'
-        )
-    st.markdown(f'<section class="quality-kpi-grid">{"".join(quality_cards)}</section>', unsafe_allow_html=True)
-
-    quality_left, quality_right = st.columns(2)
-    with quality_left:
-        reason_chart = px.bar(
-            top_breakdown(filtered, "reason", 10),
-            x="cuenta",
-            y="reason",
-            orientation="h",
-            title="Main reported reasons",
-            color_discrete_sequence=[COLORS["red"]],
-        )
-        st.plotly_chart(style_figure(reason_chart), use_container_width=True)
-    with quality_right:
-        segment_chart = px.histogram(
-            filtered,
-            x="segments",
-            y="cuenta",
-            histfunc="sum",
-            title="Messages by segment count",
-            color_discrete_sequence=[COLORS["amber"]],
-        )
-        st.plotly_chart(style_figure(segment_chart), use_container_width=True)
-
-    failed_heatmap_data = (
-        filtered.loc[filtered["failed"].fillna(False)]
-        .pivot_table(index="hora", columns="dia_semana", values="cuenta", aggfunc="sum", fill_value=0)
-    )
-    day_order = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-    day_labels = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"]
-    failed_heatmap_data = failed_heatmap_data.reindex(index=range(24), columns=day_order, fill_value=0)
-    failed_heatmap_labels = failed_heatmap_data.map(
-        lambda value: f"{value / 1_000_000:.1f}M" if value >= 1_000_000 else f"{value / 1_000:.0f}K"
-    )
-    failed_heatmap = go.Figure(
-        go.Heatmap(
-            z=failed_heatmap_data.values,
-            x=day_labels,
-            y=failed_heatmap_data.index,
-            text=failed_heatmap_labels.values,
-            texttemplate="%{text}",
-            textfont=dict(color="#07110f", size=10),
-            colorscale=[[0, "#142b3d"], [.5, "#f2c94c"], [1, "#e05260"]],
-            colorbar=dict(title="Failed", tickformat="~s"),
-            xgap=2,
-            ygap=2,
-            hovertemplate="%{x} · %{y}:00<br>%{z:,.0f} failed<extra></extra>",
-        )
-    )
-    failed_heatmap = style_figure(failed_heatmap, 430)
-    failed_heatmap.update_layout(
-        title=dict(
-            text="Failed by day and hour",
-            font=dict(color="#ffffff", size=20, family="Space Grotesk"),
-            x=0.02,
-            xanchor="left",
-        )
-    )
-    st.plotly_chart(failed_heatmap, use_container_width=True)
-
-    character_data = filtered.groupby("total_characters", as_index=False)["cuenta"].sum().sort_values("total_characters")
-    character_chart = px.line(
-        character_data,
-        x="total_characters",
-        y="cuenta",
-        title="Message length distribution",
-        color_discrete_sequence=[COLORS["cyan"]],
-    )
-    st.plotly_chart(style_figure(character_chart), use_container_width=True)
+with heatmap_tab:
+    heatmap_metric = st.selectbox("Métrica de volumen", list(METRIC_LABELS), format_func=METRIC_LABELS.get, key="heatmap_metric")
+    with st.container(border=True):
+        st.plotly_chart(build_heatmap(filtered, heatmap_metric, False), width="stretch")
+    rate_metric = st.segmented_control("Tasa", ["facturados", "fallidos", "excluidos"], default="fallidos", format_func=METRIC_LABELS.get) or "fallidos"
+    with st.container(border=True):
+        st.plotly_chart(build_heatmap(filtered, rate_metric, True), width="stretch")
 
 with insights_tab:
-    st.subheader("6 alerts to decide")
-    insight_columns = st.columns(3)
-    for index, (level, horizon, icon, title, description, color) in enumerate(build_insights(filtered)):
-        with insight_columns[index % 3]:
-            st.markdown(
-                f'<div class="insight" style="--signal:{color}">'
-                f'<div class="insight-top"><div class="insight-meta"><span class="insight-icon">{icon}</span>'
-                f'<span class="signal">{level}</span></div><span class="insight-horizon">{horizon}</span></div>'
-                f'<strong>{title}</strong><p>{description}</p></div>',
-                unsafe_allow_html=True,
-            )
+    with st.container(border=True):
+        st.subheader("Señales operativas")
+        insight_cards = "".join(f'<article class="insight" style="--signal:{color}"><div class="insight-head"><span class="insight-label">{label}</span><span class="insight-status">{status}</span></div><strong>{title}</strong><p>{description}</p></article>' for label, status, title, description, color in build_insights(filtered, comparison_data))
+        st.markdown(f'<section class="insight-grid">{insight_cards}</section>', unsafe_allow_html=True)
 
-st.caption("Los indicadores se calculan con SUM(cuenta). Los nuevos CSV se incorporan al recargar la aplicación.")
+st.caption("Los mensajes se suman desde cuenta; facturados, fallidos y excluidos se calculan ponderando sus indicadores por cuenta. Los CSV de la raíz se consolidan automáticamente.")
